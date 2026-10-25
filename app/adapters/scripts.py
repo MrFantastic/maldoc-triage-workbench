@@ -117,6 +117,18 @@ def vendor_enabled() -> bool:
     return not edition.is_remnux()
 
 
+def system_candidates(names) -> list[str]:
+    """Paths where an installed copy of a tool may be: PATH, then the usual system folders.
+
+    On Windows shutil.which only matches PATHEXT extensions, and .py is not one, so
+    each PATH folder is also checked for the exact file name."""
+    found = [w for w in (shutil.which(n) for n in names) if w]
+    if os.name == "nt":
+        path_dirs = [d for d in os.environ.get("PATH", "").split(os.pathsep) if d]
+        return found + [os.path.join(d, n) for d in path_dirs for n in names]
+    return found + [os.path.join(d, n) for d in SYSTEM_TOOL_DIRS for n in names]
+
+
 def locate(script: str) -> str | None:
     """$MTW_<NAME>, then (standard edition) the vendor folder, then PATH and the usual system folders."""
     env = os.environ.get("MTW_" + script.split(".")[0].replace("-", "_").upper())
@@ -124,12 +136,7 @@ def locate(script: str) -> str | None:
     candidates = [env or ""]
     if vendor_enabled():
         candidates += [os.path.join(VENDOR_DIR, sub, script), os.path.join(VENDOR_DIR, script)]
-    for n in names:
-        found = shutil.which(n)
-        if found:
-            candidates.append(found)
-    if os.name != "nt":
-        candidates += [os.path.join(d, n) for d in SYSTEM_TOOL_DIRS for n in names]
+    candidates += system_candidates(names)
     for c in candidates:
         if c and os.path.isfile(c):
             return os.path.realpath(c)

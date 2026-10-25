@@ -15,6 +15,8 @@ All notable changes to Maldoc Triage Workbench. Versions follow
   lint job, and runs the unit tests on Windows as well as Linux.
 
 ### Fixed
+- On Windows, analysis scripts on PATH (such as `pdf-parser.py`) were not found,
+  because `shutil.which` only matches PATHEXT extensions and `.py` is not one.
 - `install.bat` had Unix line endings, which can break `goto` in cmd.
 - A stray `EDITION` file can no longer be committed by accident.
 

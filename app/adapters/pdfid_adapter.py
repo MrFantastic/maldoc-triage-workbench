@@ -131,12 +131,7 @@ def locate_pdfid() -> str | None:
     candidates = [os.environ.get("MTW_PDFID", "")]
     if scripts.vendor_enabled():
         candidates.append(os.path.join(VENDOR_DIR, "pdfid.py"))
-    for exe in ("pdfid.py", "pdfid"):
-        found = shutil.which(exe)
-        if found:
-            candidates.append(found)
-    if os.name != "nt":
-        candidates += [os.path.join(d, n) for d in scripts.SYSTEM_TOOL_DIRS for n in ("pdfid.py", "pdfid")]
+    candidates += scripts.system_candidates(("pdfid.py", "pdfid"))
     for c in candidates:
         if c and os.path.isfile(c):
             return os.path.realpath(c)
