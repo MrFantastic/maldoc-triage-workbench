@@ -1,0 +1,3 @@
+# Optional: Excel 4.0 (XLM) macro emulation for the Macros tab.
+# Kept separate so a problem installing it never blocks the core app.
+XLMMacroDeobfuscator>=0.2.7

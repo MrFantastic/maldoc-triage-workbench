@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup: create venv + install everything",
+      "type": "shell",
+      "windows": {
+        "command": "python -m venv .venv; .venv\\Scripts\\python -m pip install --upgrade pip; .venv\\Scripts\\python setup_vendor.py --pip; .venv\\Scripts\\python setup_vendor.py --peepdf; .venv\\Scripts\\python -m pip install -r requirements-xlm.txt -r requirements-safety.txt ruff"
+      },
+      "linux": {
+        "command": "python3 -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/python setup_vendor.py --pip && .venv/bin/python setup_vendor.py --peepdf && .venv/bin/python -m pip install -r requirements-xlm.txt -r requirements-safety.txt ruff"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: run all",
+      "type": "shell",
+      "windows": { "command": ".venv\\Scripts\\python -m unittest discover -s tests -v" },
+      "linux": { "command": ".venv/bin/python -m unittest discover -s tests -v" },
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint: ruff check",
+      "type": "shell",
+      "windows": { "command": ".venv\\Scripts\\python -m ruff check ." },
+      "linux": { "command": ".venv/bin/python -m ruff check ." },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: Workbench",
+      "type": "shell",
+      "windows": { "command": ".venv\\Scripts\\python run.py" },
+      "linux": { "command": ".venv/bin/python run.py" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build: release zips",
+      "type": "shell",
+      "windows": { "command": ".venv\\Scripts\\python package.py" },
+      "linux": { "command": ".venv/bin/python package.py" },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+# Optional: peepdf overview + console in the peepdf tab (the JS workbench works without it).
+# Don't "pip install -r" this file: peepdf-3 depends on STPyV8 (a V8 JavaScript engine)
+# which often fails to build, and the app never executes JavaScript anyway. Instead run:
+#
+#     python setup_vendor.py --peepdf
+#
+# which installs peepdf-3 with --no-deps plus the dependencies below.
+# peepdf is GPLv3. It is installed separately and run as its own program, never
+# bundled with or imported by this MIT-licensed app.
+requests
+pypdf
+colorama
+Pillow
+pythonaes
+lxml
+prettytable>=3.12.0
+jsbeautifier
+asn1crypto

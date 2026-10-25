@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Downloaded analysis tools (fetched by setup_vendor.py, never committed)
+vendor/*
+!vendor/.gitkeep
+
+# Build and package output
+build/
+dist/
+*.spec
+
+# Analysis output: samples, extracted payloads, reports and logs must never be committed
+MTW_output/
+*.bin
+*.infected.zip
+*_artifacts.zip
+/samples/
+MTW_test_suite/
+
+# Editors / OS (shared VS Code project config is committed; personal files are not)
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local tooling
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/

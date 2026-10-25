@@ -1,0 +1,98 @@
+# Changelog
+
+All notable changes to Maldoc Triage Workbench. Versions follow
+[Semantic Versioning](https://semver.org/).
+
+## 1.4.0 (2026-10-14)
+
+First public release, under the MIT License.
+
+### Added
+- Two editions built from the same code: **standard** (Windows / Linux; fetches
+  its own tools) and **REMnux** (uses the tools REMnux installs, never downloads
+  any, and ignores any `vendor/` folder). Help → Tool status shows the edition.
+- REMnux edition installer (`install.sh`) that reuses REMnux's own Python
+  packages and lists which tools it found.
+- Tools are also looked up in `/usr/local/bin`, `/usr/bin` and `/opt/remnux-didier`.
+- `LICENSE`, `SECURITY.md`, `CHANGELOG.md`, `pyproject.toml` (metadata and ruff
+  settings) and a GitHub Actions workflow that runs the unit tests on
+  Python 3.9 to 3.13.
+
+### Changed
+- The version number lives in one place (`app/__init__.py`).
+- Code tidy-up for release: crash logging and the tool-status table moved out
+  of the main window, long lines wrapped, imports ordered, test files named
+  by topic.
+
+## 1.3 (pre-release builds)
+
+### Added
+- Tool versions in Help → Tool status, the startup log, the HTML report, the
+  phishing summary and the session export.
+- Unrecognized tool output is reported instead of ignored. When none of a
+  tool's output is recognized, the tool counts as failed and the verdict says
+  INCOMPLETE. When only part of it is, an Info finding gives the tool version
+  and the first unrecognized lines, a Low verdict becomes "(UNVERIFIED)", and
+  the form-script downgrade is switched off.
+- pdfid plugins: their scores and messages become findings. Plugins that don't
+  work with the installed pdfid are detected and shown greyed out.
+- Harmless test PDF generators in `tests/samples/`.
+
+### Fixed
+- peepdf failed to start while its JavaScript engine was blocked.
+- Ciphertext and placeholder strings in encrypted PDFs no longer show up as IOCs.
+- Inline actions read "Inline action." instead of "Action obj None".
+- `/SubmitForm` and `/GoToR` actions are reported.
+- Clearer wording when a finding's severity was lowered by correlation.
+- The artifacts list is kept when the same file is reopened.
+
+## 1.2 (pre-release builds)
+
+### Added
+- Every parser that reads the sample runs in its own worker process, with a
+  time limit, an output cap and (on Linux) a memory cap.
+- **Stop** in the status bar ends the current file's tools.
+- pdfid and pdf-parser results are correlated, so standard Acrobat form
+  scripts don't raise a High finding on their own.
+- Encrypted PDFs are flagged, and **Decrypt PDF** opens a readable copy as a
+  new sample.
+- Hex view: save or analyze a selection, and jump to data after `%%EOF`.
+- File → Export artifacts: one zip encrypted with the password `infected`,
+  plus a manifest of SHA-256 hashes.
+- Vendored tools are hash-checked at startup (`vendor/manifest.json`).
+
+### Security
+- Decompression budgets for OOXML packages; parts with DTD or entity
+  declarations are flagged and not parsed.
+- The JavaScript engines peepdf can use are made unimportable for every tool
+  the app starts, and peepdf console commands that run code are refused.
+- Untrusted text is escaped everywhere it is shown; CSV exports are guarded
+  against formula injection.
+- App errors are logged to `~/MTW_output/logs/`.
+
+### Fixed
+- Results from a previous file can no longer land on the next one.
+- A failed tool makes the verdict INCOMPLETE instead of "nothing found".
+
+## 1.1 (pre-release builds)
+
+### Added
+- Investigate panel: what each finding means, why attackers use it, when it's
+  harmless, and next steps with **Go** buttons and the equivalent command line.
+- PDF trigger and action chains (`/OpenAction`, `/AA`, `/Next`) traced to the
+  JavaScript, Launch or URI they run.
+- Command builder generated from each tool's own `-h`, in every tool tab.
+- Severity that depends on context, such as `/AA` and `/OpenAction` without
+  JavaScript.
+
+## 1.0 (pre-release builds)
+
+### Added
+- Desktop GUI (PySide6) with a type-aware set of tabs for PDF, OLE2, OOXML, RTF,
+  MHT, Word XML and SLK files.
+- pdfid, pdf-parser and peepdf tabs; Office triage (oleid, mraptor); Macros
+  (olevba, XLM emulation, VBA stomping, msoffcrypto decryption); Streams
+  (oledump); Parts; Objects & links (oleobj, rtfobj, msodde, rtfdump);
+  Metadata; Report (HTML report, phishing summary, IOC CSV, JSON); Hex.
+- `setup_vendor.py` fetches Didier Stevens' tools into `vendor/`.
+
