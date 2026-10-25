@@ -18,8 +18,9 @@ import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOP = "maldoc-triage-workbench"
-SKIP_DIRS = {"__pycache__", ".git", ".github", ".vscode", "dist", "build", ".venv", "packaging"}
-SKIP_FILES = {"package.py", "EDITION", ".gitignore", ".gitattributes", ".editorconfig", "pyproject.toml"}
+SKIP_DIRS = {"__pycache__", ".git", ".github", ".vscode", "dist", "build", ".venv", "packaging", "docs"}
+SKIP_FILES = {"package.py", "EDITION", ".gitignore", ".gitattributes", ".editorconfig", "pyproject.toml",
+              "CONTRIBUTING.md"}
 STANDARD_ONLY = {"install.bat", "start.bat", "install.sh", "setup_vendor.py", "build.py",
                  "requirements-peepdf.txt", "requirements-xlm.txt", "requirements.txt"}
 EXECUTABLE = {"install.sh", "start.sh", "run.py", "setup_vendor.py"}

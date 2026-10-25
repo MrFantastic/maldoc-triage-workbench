@@ -1,0 +1,48 @@
+name: False positive / negative
+description: A verdict or finding that looks wrong for a file
+labels: [detection]
+body:
+  - type: markdown
+    attributes:
+      value: "**Never attach the sample or post a download link.** Give its SHA-256 instead. If you can reproduce the problem with a harmless file you made, attach that."
+  - type: input
+    id: sha256
+    attributes:
+      label: SHA-256 of the file
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of problem
+      options:
+        - "False positive (rated too high)"
+        - "False negative (missed something)"
+        - "Wrong finding text or explanation"
+    validations:
+      required: true
+  - type: textarea
+    id: got
+    attributes:
+      label: What the app reported
+      description: "Verdict and finding titles (Report tab → Copy phishing summary works well)"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "What you expected, and why"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and edition
+      placeholder: "1.4.1, REMnux edition"
+    validations:
+      required: true
+  - type: textarea
+    id: tools
+    attributes:
+      label: "Help → Tool status"
+      render: text

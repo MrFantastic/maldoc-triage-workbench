@@ -1,0 +1,46 @@
+name: Bug report
+description: The app crashed, hung, or did something wrong (not about a verdict)
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "**Don't attach malware.** Security problems go through SECURITY.md (Security tab → Report a vulnerability), not here."
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "Help → About, e.g. 1.4.1"
+      placeholder: "1.4.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Edition and OS
+      options:
+        - REMnux edition on REMnux
+        - Standard edition on Windows
+        - Standard edition on Linux
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "What did you do?"
+      description: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: "What happened instead?"
+      description: "Include the error from the log panel or ~/MTW_output/logs/"
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: tools
+    attributes:
+      label: "Help → Tool status"
+      render: text

@@ -1,5 +1,9 @@
 # Maldoc Triage Workbench
 
+[![tests](https://github.com/MrFantastic/maldoc-triage-workbench/actions/workflows/tests.yml/badge.svg)](https://github.com/MrFantastic/maldoc-triage-workbench/actions/workflows/tests.yml)
+[![latest release](https://img.shields.io/github/v/release/MrFantastic/maldoc-triage-workbench)](https://github.com/MrFantastic/maldoc-triage-workbench/releases/latest)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A guided, safety-hardened desktop front-end for the REMnux maldoc tools, for
 deciding whether a single PDF or Office document is malicious. It drives Didier
 Stevens' pdfid, pdf-parser, oledump, zipdump and rtfdump; Decalage's oletools;
@@ -12,15 +16,26 @@ explanation and next steps for each one.
 > analysis VM (REMnux or similar), never on a production machine. It is provided
 > as-is, with no warranty (see [LICENSE](LICENSE)).
 
-**Status: beta (1.4).** Tested by one person, on Windows, with harmless test files
-(`tests/samples/make_test_suite.py`). The REMnux edition and some hands-on flows
-(PDF/Office decryption, carving, artifact export) need more real-world use.
-Bug reports are welcome; security issues go through [SECURITY.md](SECURITY.md).
+### Why use it instead of running the tools yourself?
+
+- **One place, one verdict.** Every relevant tool runs on load; findings from all of them are
+  rated, correlated (e.g. standard Acrobat form scripts aren't flagged as malicious) and
+  rolled into a risk verdict, with the IOCs collected and defanged.
+- **It teaches the workflow.** Each finding explains what it is, when it's harmless, and the
+  next steps, each with a button that does it and the equivalent command line to copy.
+- **Built to be safe with hostile files.** Every parser runs in its own time- and memory-limited
+  process, nothing from the sample is executed, and a tool that can't run makes the verdict
+  INCOMPLETE rather than "clean". See [Safety model](#safety-model).
+
+**Status: beta.** Developed and tested by one person, with harmless test files, on Windows
+and on REMnux (noble, October 2026 release) with REMnux's own tools. Real-world use is
+still limited, so treat its verdict as triage, not a final answer, and please report
+false positives and negatives (see [Contributing](#contributing)).
 
 ## Download
 
 Get the latest version from the **[Releases page](https://github.com/MrFantastic/maldoc-triage-workbench/releases/latest)**.
-No git or GitHub account workflow needed; pick the file for your machine:
+No git needed; pick the file for your machine:
 
 | Your machine | Download | Then |
 |---|---|---|
@@ -124,7 +139,8 @@ Help → Tool status shows which edition is running and where each tool was foun
 ./start.sh       # or: ./start.sh suspicious.pdf
 ```
 
-If the window doesn't open, install Qt's missing library: `sudo apt install libxcb-cursor0`.
+If the window doesn't open under an X11 session, install Qt's missing library:
+`sudo apt install libxcb-cursor0` (Wayland desktops don't need it).
 
 ### Manual
 
@@ -254,32 +270,11 @@ Build on each OS you need. The executable re-launches itself as the isolated
 worker and to run the bundled tools, so timeouts and process isolation work
 without Python installed.
 
-## Development
+## Contributing
 
-```
-app/core/        Qt-free: router, session, correlation, safety, report (unit tested)
-app/adapters/    one adapter per tool; parse output into data + findings
-app/adapters/isolated.py  GUI-side calls that run a parser in a worker process
-app/worker.py    the worker entry point (run.py --worker)
-app/gui/         one view per tab; views talk to the window via Context
-tests/           unit tests; tests/samples/ builds harmless test PDFs
-packaging/       the REMnux edition's install.sh and README
-vendor/          third-party scripts fetched by setup_vendor.py, unmodified (not committed)
-```
-
-```bash
-python -m unittest discover -s tests     # no GUI or analysis tools needed
-ruff check .                             # settings in pyproject.toml
-python package.py                        # builds the standard and REMnux zips into dist/
-```
-
-The version number is in `app/__init__.py`; `pyproject.toml` repeats it, and the
-tests check the two agree. Record changes in [CHANGELOG.md](CHANGELOG.md).
-
-To release: set the new version in both files, give it a `## <version> (<date>)` section
-in the changelog, commit, then push an annotated tag `v<version>`. The release workflow
-runs the tests, checks the tag matches the version, builds both zips with `package.py`,
-and publishes them with `SHA256SUMS.txt` and that changelog section as the release notes.
+Bug reports, false positives / negatives and pull requests are welcome. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for how to report a result without sharing malware, the code
+layout, running the tests and making a release. Security issues: [SECURITY.md](SECURITY.md).
 
 ## License
 
