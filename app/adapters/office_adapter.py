@@ -114,6 +114,13 @@ def _run_oleid(path: str, data: OfficeTriageData) -> None:
 
 def _run_vba_and_mraptor(path: str, data: OfficeTriageData) -> None:
     try:
+        with open(path, "rb") as fh:
+            if fh.read(5).startswith(b"{\\rt"):   # RTF cannot contain VBA or XLM macros
+                data.verdict = "NO MACRO"
+                return
+    except OSError:
+        pass
+    try:
         from oletools.olevba import VBA_Parser  # type: ignore
         from oletools.mraptor import MacroRaptor  # type: ignore
     except ImportError as exc:

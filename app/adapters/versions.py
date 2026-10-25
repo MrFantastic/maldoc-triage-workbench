@@ -6,7 +6,9 @@ metadata. Results are cached; call clear() after tools are re-downloaded.
 """
 from __future__ import annotations
 
+import os
 import re
+import subprocess
 import sys
 import threading
 
@@ -50,12 +52,46 @@ def dist_version(*names: str) -> str:
     return ""
 
 
+def launcher_dist_version(script: str | None, *names: str) -> str:
+    """Version of a package installed in a console script's own environment.
+
+    REMnux installs tools such as peepdf and XLMMacroDeobfuscator in separate
+    environments (/opt/<tool>/bin/python3) with a launcher on PATH, so their
+    metadata isn't visible to this Python. Ask the launcher's interpreter instead
+    (only the interpreter named on the launcher's #! line is run, never the tool)."""
+    if not script or os.name == "nt":
+        return ""
+    try:
+        with open(script, "rb") as fh:
+            first = fh.readline(512).decode("utf-8", "replace").strip()
+    except OSError:
+        return ""
+    if not first.startswith("#!"):
+        return ""
+    interp = first[2:].strip().split()[0] if first[2:].strip() else ""
+    if not os.path.isabs(interp) or not os.path.isfile(interp) or "python" not in os.path.basename(interp):
+        return ""
+    code = ("import importlib.metadata as m, sys\n"
+            "for n in sys.argv[1:]:\n"
+            "    try:\n        print(m.version(n)); break\n"
+            "    except Exception:\n        pass\n")
+    try:
+        r = subprocess.run([interp, "-I", "-c", code, *names], capture_output=True, text=True, timeout=15)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    out = r.stdout.strip().splitlines()
+    return out[0][:40] if r.returncode == 0 and out else ""
+
+
 def _peepdf_version() -> str:
     v = dist_version("peepdf-3", "peepdf")
     if v:
         return v
     from .peepdf_adapter import locate
     path = locate()
+    v = launcher_dist_version(path, "peepdf-3", "peepdf")
+    if v:
+        return v
     if path and path.lower().endswith(".py"):
         try:
             with open(path, "rb") as fh:
@@ -77,7 +113,8 @@ def _detect() -> dict[str, str]:
         "rtfdump": script_version(scripts.locate("rtfdump.py")),
         "oletools": oletools_version() or "",
         "peepdf": _peepdf_version(),
-        "XLMMacroDeobfuscator": dist_version("XLMMacroDeobfuscator"),
+        "XLMMacroDeobfuscator": dist_version("XLMMacroDeobfuscator") or launcher_dist_version(
+            scripts.locate_cli("xlmdeobfuscator"), "XLMMacroDeobfuscator"),
         "msoffcrypto-tool": dist_version("msoffcrypto-tool"),
         "pikepdf": dist_version("pikepdf"),
         "pypdf": dist_version("pypdf"),

@@ -15,6 +15,18 @@ All notable changes to Maldoc Triage Workbench. Versions follow
   lint job, and runs the unit tests on Windows as well as Linux.
 
 ### Fixed
+- Tested on REMnux (noble, 2026-10 release) with its real tools; these came out of it:
+  - A `.docx` with an ordinary hyperlink was rated HIGH because oleid rates any
+    external relationship High. When the Parts analysis has read every external
+    relationship and all are hyperlinks, oleid's finding is now lowered to Low
+    (remote templates, frames, OLE objects and sub-documents keep it High).
+  - msodde lists every field in an RTF; a HYPERLINK field was reported as a High
+    "DDE field". It is now a Low "Hyperlink field"; DDE/DDEAUTO stay High.
+  - mraptor was run on RTF files (which cannot contain macros) and reported an error.
+  - Tool status showed no version for peepdf and XLMMacroDeobfuscator on REMnux,
+    which installs them in their own environments; their launcher's Python is asked.
+  - The repository-only tests (`package.py`, `pyproject.toml`) failed when run from
+    a release zip; they are now skipped there.
 - On Windows, analysis scripts on PATH (such as `pdf-parser.py`) were not found,
   because `shutil.which` only matches PATHEXT extensions and `.py` is not one.
 - `install.bat` had Unix line endings, which can break `goto` in cmd.

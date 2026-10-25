@@ -71,6 +71,8 @@ class EditionTests(unittest.TestCase):
 class PackageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if not os.path.isfile(os.path.join(ROOT, "package.py")):
+            raise unittest.SkipTest("package.py is in the source repository only, not in release zips")
         spec = importlib.util.spec_from_file_location("mtw_package", os.path.join(ROOT, "package.py"))
         cls.pkg = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.pkg)
@@ -131,6 +133,8 @@ class ProjectFileTests(unittest.TestCase):
             import tomllib
         except ImportError:                     # Python < 3.11
             self.skipTest("tomllib needs Python 3.11+")
+        if not os.path.isfile(os.path.join(ROOT, "pyproject.toml")):
+            self.skipTest("pyproject.toml is in the source repository only, not in release zips")
         with open(os.path.join(ROOT, "pyproject.toml"), "rb") as fh:
             self.project = tomllib.load(fh)["project"]
 

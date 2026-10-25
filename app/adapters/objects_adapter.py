@@ -105,6 +105,19 @@ def extract(path: str, sha256: str, family: str, output_base: str) -> ToolResult
                       error="" if ok else text[-500:])
 
 
+def _field_finding(link: str) -> Finding:
+    """msodde lists every field it finds in an RTF, not only DDE. A HYPERLINK field only opens
+    its target when clicked, so it is Low; DDE/DDEAUTO and anything else stay High."""
+    m = re.match(r"\s*\\?([A-Za-z]+)", link)
+    if m and m.group(1).upper() == "HYPERLINK":
+        return Finding("msodde", Severity.LOW, f"Hyperlink field: {defang(link)[:90]}",
+                       "A HYPERLINK field opens its target only when clicked. Reported by msodde.",
+                       ref={"tab": "objects", "kb": "office:dde"})
+    return Finding("msodde", Severity.HIGH, f"DDE field: {defang(link)[:90]}",
+                   "DDE/DDEAUTO fields can launch commands when the document opens.",
+                   ref={"tab": "objects", "kb": "office:dde"})
+
+
 def msodde(path: str) -> ToolResult:
     """Run msodde; each DDE/DDEAUTO field it reports becomes a High finding."""
     r = scripts.run_module("oletools.msodde", [path], "msodde", cli_names=("msodde",))
@@ -113,9 +126,7 @@ def msodde(path: str) -> ToolResult:
     if "DDE Links:" in text:
         tail = text.split("DDE Links:", 1)[1]
         links = [ln.strip() for ln in tail.splitlines() if ln.strip()]
-    findings = [Finding("msodde", Severity.HIGH, f"DDE field: {defang(link)[:90]}",
-                        "DDE/DDEAUTO fields can launch commands when the document opens.",
-                        ref={"tab": "objects", "kb": "office:dde"}) for link in links[:10]]
+    findings = [_field_finding(link) for link in links[:10]]
     ok = r.returncode == 0 or bool(links)
     error = ""
     if ok and "DDE Links:" not in text and not (r.timed_out or r.stopped):

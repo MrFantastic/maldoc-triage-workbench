@@ -57,7 +57,7 @@ done
 [ "$missing" = 1 ] && echo "  Some tools are missing: the matching tabs will say so. 'sudo remnux upgrade' may add them."
 
 if command -v ldconfig >/dev/null 2>&1 && ! ldconfig -p | grep -q libxcb-cursor; then
-  echo "note: the GUI needs libxcb-cursor0. If it won't start: sudo apt install libxcb-cursor0"
+  echo "note: under an X11 session the GUI needs libxcb-cursor0. If it won't start: sudo apt install libxcb-cursor0"
 fi
 chmod +x start.sh 2>/dev/null
 echo "Setup complete. Run ./start.sh  (or ./start.sh sample.pdf)"

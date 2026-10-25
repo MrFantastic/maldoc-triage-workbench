@@ -335,6 +335,61 @@ class VerdictTests(unittest.TestCase):
         self.assertEqual(s.risk, Severity.HIGH)
 
 
+class OfficeFalsePositiveTests(unittest.TestCase):
+    """Harmless Office features that real REMnux tools reported as High (found on REMnux)."""
+
+    @staticmethod
+    def _oleid(count):
+        return Finding("oleid", Severity.HIGH, f"External Relationships: {count}", "",
+                       ref={"indicator": "ext_rels", "kb": "oleid:ext_rels"})
+
+    @staticmethod
+    def _part(kb, sev=Severity.LOW):
+        return Finding("parts", sev, "External hyperlink: x", "", ref={"kb": kb, "tab": "parts"})
+
+    def test_hyperlink_only_lowers_oleid_external_rels(self):
+        f = self._oleid(1)
+        self.assertEqual(correlate.apply([f, self._part("ooxml:external")], {}), 1)
+        self.assertEqual(f.severity, Severity.LOW)
+        correlate.apply([f], {})                       # parts gone: restored
+        self.assertEqual(f.severity, Severity.HIGH)
+
+    def test_remote_template_keeps_oleid_high(self):
+        f = self._oleid(2)
+        correlate.apply([f, self._part("ooxml:external"), self._part("ooxml:template", Severity.HIGH)], {})
+        self.assertEqual(f.severity, Severity.HIGH)
+
+    def test_more_relationships_than_parts_saw_keeps_high(self):
+        f = self._oleid(3)
+        correlate.apply([f, self._part("ooxml:external")], {})
+        self.assertEqual(f.severity, Severity.HIGH)
+
+    def test_msodde_hyperlink_field_is_low_dde_is_high(self):
+        out = (b"msodde 0.60\nDDE Links:\nHYPERLINK \"https://example.com/a\"\n"
+               b'DDEAUTO c:\\windows\\system32\\cmd.exe "/k calc"\n')
+        orig = scripts.run_module
+        scripts.run_module = lambda *a, **k: scripts.RunResult("msodde", out, "", 0)
+        try:
+            res = objects_adapter.msodde("x.rtf")
+        finally:
+            scripts.run_module = orig
+        sev = {f.title.split(":", 1)[0]: f.severity for f in res.findings}
+        self.assertEqual(sev["Hyperlink field"], Severity.LOW)
+        self.assertEqual(sev["DDE field"], Severity.HIGH)
+
+    def test_rtf_is_not_scanned_for_macros(self):
+        from app.adapters import office_adapter
+        with tempfile.NamedTemporaryFile("wb", suffix=".rtf", delete=False) as fh:
+            fh.write(b"{\\rtf1 hello}")
+        try:
+            data = office_adapter.OfficeTriageData()
+            office_adapter._run_vba_and_mraptor(fh.name, data)
+        finally:
+            os.unlink(fh.name)
+        self.assertEqual(data.verdict, "NO MACRO")
+        self.assertEqual(data.vba_error, "")
+
+
 if __name__ == "__main__":
     unittest.main()
 

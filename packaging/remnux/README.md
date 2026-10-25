@@ -21,10 +21,10 @@ cd maldoc-triage-workbench
 `install.sh` only installs what REMnux lacks, usually just the GUI library
 (PySide6), so it needs internet access once. It reuses REMnux's own oletools,
 msoffcrypto and pikepdf when they're importable, then lists which REMnux tools
-it found. If the window doesn't open, install Qt's missing library:
-`sudo apt install libxcb-cursor0`.
+it found. REMnux's default Wayland desktop needs nothing more. Under an X11 session, if the window
+doesn't open, install Qt's missing library: `sudo apt install libxcb-cursor0`.
 
-Python 3.9 or newer is required (3.10+ recommended). If REMnux's `python3` is
+Python 3.9 or newer is required (3.12+ recommended). If REMnux's `python3` is
 older, install a newer one and run `PYTHON=python3.10 ./install.sh`.
 
 ## Where the tools come from
