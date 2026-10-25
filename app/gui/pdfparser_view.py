@@ -122,7 +122,7 @@ class PdfParserView(QWidget):
         self.raw = text_view()
         self.trailer = text_view()
         tabs = QTabWidget()
-        tabs.addTab(trig_page, "Triggers & actions")
+        tabs.addTab(trig_page, "Triggers && actions")
         tabs.addTab(explorer, "Objects")
         tabs.addTab(builder_page, "All options (command builder)")
         tabs.addTab(self.trailer, "Trailers")
@@ -220,7 +220,7 @@ class PdfParserView(QWidget):
             fill(self.triggers, rows, colors=colors)
             return
         fill(self.triggers, rows, data=trig, colors=colors)
-        self.tabs.setTabText(0, f"Triggers & actions ({len(trig)})")
+        self.tabs.setTabText(0, f"Triggers && actions ({len(trig)})")
 
     def show_triggers(self) -> None:
         self.tabs.setCurrentWidget(self.trig_page)

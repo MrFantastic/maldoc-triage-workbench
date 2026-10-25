@@ -3,6 +3,19 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- README screenshots, badges and a "Why use it" section; CONTRIBUTING.md and issue
+  templates (bug report; false positive / negative, asking for a SHA-256, never a sample).
+- `tests/samples/make_test_office.py`: harmless .docx / .rtf files for the Office tabs.
+
+### Fixed
+- Investigate panel: the previous finding's text could briefly paint under the new one
+  (old widgets are now hidden before they're deleted).
+- The pdf-parser tab "Triggers & actions" showed as "Triggers _actions" (the `&` was
+  taken as a keyboard-shortcut marker).
+
 ## 1.4.1 (2026-10-25)
 
 ### Added

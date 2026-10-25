@@ -16,6 +16,23 @@ explanation and next steps for each one.
 > analysis VM (REMnux or similar), never on a production machine. It is provided
 > as-is, with no warranty (see [LICENSE](LICENSE)).
 
+![Maldoc Triage Workbench on REMnux with a harmless test PDF: findings, the Investigate panel and pdf-parser's trigger trace](docs/screenshots/pdf-triggers.png)
+
+<details>
+<summary><b>More screenshots</b></summary>
+
+**Report tab:** verdict, a phishing summary to paste into a ticket, and every IOC, defanged.
+
+![Report tab with verdict, phishing summary and IOCs](docs/screenshots/report.png)
+
+**Office:** remote template injection found in a harmless `.docx` (Parts → Relationships).
+
+![Parts tab showing a remote attachedTemplate relationship](docs/screenshots/office-template-injection.png)
+
+</details>
+
+<sub>Screenshots: REMnux edition on REMnux, using the harmless files from `tests/samples/`.</sub>
+
 ### Why use it instead of running the tools yourself?
 
 - **One place, one verdict.** Every relevant tool runs on load; findings from all of them are

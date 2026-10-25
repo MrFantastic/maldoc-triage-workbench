@@ -47,16 +47,20 @@ class InvestigatePanel(QWidget):
         self.show_placeholder()
 
     def _clear(self) -> None:
+        """Remove the previous finding's widgets. They're hidden at once, because deleteLater
+        only frees them on the next event-loop pass and until then they'd still paint."""
         while self.lay.count():
             item = self.lay.takeAt(0)
             w = item.widget()
             if w is not None:
+                w.hide()
                 w.deleteLater()
             elif item.layout() is not None:
                 lay = item.layout()
                 while lay.count():
                     sub = lay.takeAt(0)
                     if sub.widget():
+                        sub.widget().hide()
                         sub.widget().deleteLater()
 
     def show_placeholder(self) -> None:
