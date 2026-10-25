@@ -3,7 +3,13 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.4.1 (2026-10-25)
+
+### Added
+- Releases: each version is published on GitHub Releases with the REMnux and
+  standard zips and a `SHA256SUMS.txt`, built and tested by `.github/workflows/release.yml`.
+- `install.sh` in a git clone detects REMnux and offers the REMnux edition
+  (`--remnux` / `--standard` to choose without the question).
 
 ### Changed
 - Windows setup now matches Linux: `install.bat` creates a private `.venv`, and

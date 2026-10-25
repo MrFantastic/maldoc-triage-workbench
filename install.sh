@@ -4,6 +4,32 @@
 # downloads Didier Stevens' tools into ./vendor. Needs internet access.
 set -u
 cd "$(dirname "$0")"
+
+# A git clone has no EDITION file, so it would install the standard edition. On a REMnux VM,
+# offer the REMnux edition instead (uses REMnux's own tools, downloads none).
+#   ./install.sh --remnux | --standard     (or MTW_INSTALL_EDITION=remnux|standard) skips the question
+if [ -f packaging/remnux/install.sh ]; then
+  choice="${MTW_INSTALL_EDITION:-}"
+  case "${1:-}" in --remnux) choice=remnux ;; --standard) choice=standard ;; esac
+  if [ -z "$choice" ] && [ -f EDITION ]; then
+    choice="$(tr -d '[:space:]' < EDITION)"
+  elif [ -z "$choice" ] && { command -v remnux >/dev/null 2>&1 || [ -x /usr/local/bin/remnux ]; }; then
+    echo "This looks like a REMnux VM. The REMnux edition uses the tools REMnux already has and"
+    echo "downloads none; the standard edition downloads its own copies into ./vendor."
+    if [ -t 0 ]; then
+      read -r -p "Set up the REMnux edition? [Y/n] " answer
+      case "$answer" in [nN]*) choice=standard ;; *) choice=remnux ;; esac
+    else
+      choice=remnux
+    fi
+  fi
+  if [ "$choice" = remnux ]; then
+    echo remnux > EDITION
+    MTW_APP_DIR="$PWD" exec bash packaging/remnux/install.sh
+  fi
+  [ "$choice" = standard ] && echo standard > EDITION
+fi
+
 PY="${PYTHON:-python3}"
 echo "============================================================"
 echo " Maldoc Triage Workbench - setup (standard edition)"

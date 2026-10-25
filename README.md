@@ -17,6 +17,23 @@ explanation and next steps for each one.
 (PDF/Office decryption, carving, artifact export) need more real-world use.
 Bug reports are welcome; security issues go through [SECURITY.md](SECURITY.md).
 
+## Download
+
+Get the latest version from the **[Releases page](https://github.com/MrFantastic/maldoc-triage-workbench/releases/latest)**.
+No git or GitHub account workflow needed; pick the file for your machine:
+
+| Your machine | Download | Then |
+|---|---|---|
+| **REMnux VM** | `maldoc-triage-workbench-<version>-remnux.zip` | `unzip` it, `cd maldoc-triage-workbench`, then `./install.sh` and `./start.sh` |
+| **Windows** | `maldoc-triage-workbench-<version>-standard.zip` | Extract it, double-click `install.bat`, then `start.bat` |
+| **Other Linux** (no REMnux tools) | `maldoc-triage-workbench-<version>-standard.zip` | `./install.sh`, then `./start.sh` |
+
+`SHA256SUMS.txt` on the same page lists each zip's SHA-256. Check it before copying a
+download into your analysis VM: `sha256sum -c SHA256SUMS.txt --ignore-missing`.
+
+Cloned the repository instead? On REMnux, `./install.sh` notices and offers to set up the
+REMnux edition.
+
 ## Design philosophy
 
 The Workbench is for **one-off analysis: deciding whether a single file is
@@ -258,6 +275,11 @@ python package.py                        # builds the standard and REMnux zips i
 
 The version number is in `app/__init__.py`; `pyproject.toml` repeats it, and the
 tests check the two agree. Record changes in [CHANGELOG.md](CHANGELOG.md).
+
+To release: set the new version in both files, give it a `## <version> (<date>)` section
+in the changelog, commit, then push an annotated tag `v<version>`. The release workflow
+runs the tests, checks the tag matches the version, builds both zips with `package.py`,
+and publishes them with `SHA256SUMS.txt` and that changelog section as the release notes.
 
 ## License
 

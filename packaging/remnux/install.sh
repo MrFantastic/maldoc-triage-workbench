@@ -4,7 +4,7 @@
 # up a private Python environment (.venv) for the GUI, reusing REMnux's Python
 # libraries (oletools, msoffcrypto, ...) when they're importable.
 set -u
-cd "$(dirname "$0")"
+cd "${MTW_APP_DIR:-$(dirname "$0")}"   # MTW_APP_DIR: set when run from a git clone's install.sh
 PY="${PYTHON:-python3}"
 echo "============================================================"
 echo " Maldoc Triage Workbench - setup (REMnux edition)"

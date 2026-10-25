@@ -2,6 +2,7 @@
   // Interpreter: the project venv made by the "Setup: create venv + install everything" task.
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
   "python.terminal.activateEnvironment": true,
+  "git.followTagsWhenSync": true,
 
   // Tests: the suite uses unittest (no GUI or analysis tools needed).
   "python.testing.unittestEnabled": true,

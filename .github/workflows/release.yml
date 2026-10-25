@@ -1,0 +1,51 @@
+name: release
+
+# Push an annotated tag v<version> (matching app/__init__.py) to publish a release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-safety.txt
+      - run: python -m unittest discover -s tests
+      - name: Check the tag matches the app version
+        run: |
+          v=$(python -c "import app; print(app.__version__)")
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" != "v$v" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match app version v$v"; exit 1
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+      - name: Build the zips
+        run: |
+          python package.py dist
+          cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Release notes from CHANGELOG.md
+        run: |
+          python - <<'PY'
+          import os, re
+          v = os.environ["VERSION"]
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(rf"^## {re.escape(v)}\b.*?\n(.*?)(?=^## |\Z)", text, re.S | re.M)
+          body = m.group(1).strip() if m else f"Maldoc Triage Workbench {v}"
+          body += ("\n\n### Which file?\n- **REMnux VM:** `-remnux.zip`\n"
+                   "- **Windows or other Linux:** `-standard.zip`\n\n"
+                   "Verify downloads against `SHA256SUMS.txt`.")
+          open("notes.md", "w", encoding="utf-8").write(body)
+          PY
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSION" dist/*.zip dist/SHA256SUMS.txt \
+            --title "Maldoc Triage Workbench $VERSION" --notes-file notes.md --target "$GITHUB_SHA"
