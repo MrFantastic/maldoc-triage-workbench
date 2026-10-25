@@ -3,6 +3,21 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+- Windows setup now matches Linux: `install.bat` creates a private `.venv`, and
+  `start.bat` uses it (falling back to the Python on PATH).
+- One stated Python requirement everywhere: 3.9 or newer, 3.12+ recommended.
+- Report and session timestamps include the UTC offset, so shared reports are
+  unambiguous.
+- Ruff rules are listed explicitly in `pyproject.toml`; CI pins ruff, runs a
+  lint job, and runs the unit tests on Windows as well as Linux.
+
+### Fixed
+- `install.bat` had Unix line endings, which can break `goto` in cmd.
+- A stray `EDITION` file can no longer be committed by accident.
+
 ## 1.4.0 (2026-10-14)
 
 First public release, under the MIT License.

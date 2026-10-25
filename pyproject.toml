@@ -42,7 +42,9 @@ target-version = "py39"
 extend-exclude = ["vendor"]
 
 [tool.ruff.lint]
-extend-select = ["E501", "W"]
+# Listed explicitly so newer ruff releases (which enable more rules by default)
+# give the same result. CI pins the ruff version too (.github/workflows/tests.yml).
+select = ["E", "F", "W"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests put the project root on sys.path before importing the app.

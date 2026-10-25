@@ -34,6 +34,13 @@ _SEV_COLOR = {Severity.HIGH: "#c62828", Severity.MEDIUM: "#b26a00", Severity.LOW
               Severity.INFO: "#616161"}
 
 
+def _stamp() -> str:
+    """Local time with its UTC offset, so a shared report is unambiguous: 2026-10-24 23:41 (UTC-04:00)."""
+    now = _dt.datetime.now().astimezone()
+    off = now.strftime("%z")
+    return f"{now:%Y-%m-%d %H:%M} (UTC{off[:3]}:{off[3:]})"
+
+
 def verdict(session: Session) -> tuple[str, str]:
     """The verdict title and recommended action for a session."""
     failed = "; ".join(f"{k}: {v}" for k, v in sorted(session.tool_errors.items()))
@@ -84,7 +91,7 @@ def phishing_summary(session: Session, analyst: str = "") -> str:
     used = _versions_used(session)
     lines += ["", "Tools: " + (", ".join(f"{t} {v}" for t, v in used.items()) if used else
                                ", ".join(sorted(session.tools_run)) or "none")]
-    lines.append(f"Analyzed: {_dt.datetime.now():%Y-%m-%d %H:%M}" + (f" by {analyst}" if analyst else ""))
+    lines.append(f"Analyzed: {_stamp()}" + (f" by {analyst}" if analyst else ""))
     return "\n".join(lines)
 
 
@@ -152,7 +159,7 @@ def html_report(session: Session, analyst: str = "") -> str:
                    for v, src in session.all_iocs)
     cmds = "\n".join(e(c) for c in dict.fromkeys(session.commands))
     notes = e(session.notes).replace("\n", "<br>") if session.notes.strip() else "<i>None</i>"
-    generated = _dt.datetime.now().strftime("%Y-%m-%d %H:%M")
+    generated = _stamp()
     by = f" · analyst {e(analyst)}" if analyst else ""
     css = _REPORT_CSS.replace("VERDICT_COLOR", color)
     rows = [("File name", s.name, False), ("Size", f"{s.size:,} bytes", False), ("Type", s.family.value, False),

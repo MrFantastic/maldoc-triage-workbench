@@ -99,7 +99,7 @@ class Session:
     facts: dict[str, dict] = field(default_factory=dict)       # source -> what that tool established
     artifacts: list[str] = field(default_factory=list)         # files the app wrote for this sample
     tool_versions: dict[str, str] = field(default_factory=dict)  # tool -> version detected this run
-    opened_at: str = field(default_factory=lambda: _dt.datetime.now().isoformat(timespec="seconds"))
+    opened_at: str = field(default_factory=lambda: _dt.datetime.now().astimezone().isoformat(timespec="seconds"))
 
     def __post_init__(self) -> None:
         self.findings.extend(self.sample.route.warnings)

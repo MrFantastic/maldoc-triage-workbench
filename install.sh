@@ -9,12 +9,11 @@ echo "============================================================"
 echo " Maldoc Triage Workbench - setup (standard edition)"
 echo "============================================================"
 if ! command -v "$PY" >/dev/null 2>&1; then
-  echo "python3 was not found. Install Python 3.10 or newer."; exit 1
+  echo "python3 was not found. Install Python 3.9 or newer (3.12+ recommended)."; exit 1
 fi
 if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)'; then
   echo "Python 3.9 or newer is needed (found $("$PY" --version 2>&1))."; exit 1
 fi
-"$PY" -c 'import sys; sys.version_info >= (3, 10) or print("note: Python 3.10+ is recommended; older versions are untested.")'
 
 echo "[1/4] Creating the Python environment (.venv)..."
 if ! "$PY" -m venv .venv; then

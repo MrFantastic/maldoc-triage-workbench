@@ -9,7 +9,9 @@ venv/
 vendor/*
 !vendor/.gitkeep
 
-# Build and package output
+# Build and package output (EDITION is written into the release zips by package.py;
+# a stray copy in the repo would switch every clone's edition)
+EDITION
 build/
 dist/
 *.spec

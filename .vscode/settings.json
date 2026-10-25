@@ -8,9 +8,9 @@
   "python.testing.pytestEnabled": false,
   "python.testing.unittestArgs": ["-v", "-s", "./tests", "-p", "test_*.py"],
 
-  // Lint/format with Ruff; settings live in pyproject.toml.
+  // Ruff lints (settings in pyproject.toml). No auto-formatter: the code is not
+  // in ruff-format/black style, so formatting would rewrite whole files.
   "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.rulers": [120]
   },
 
