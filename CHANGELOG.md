@@ -3,7 +3,7 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.4.2 (2026-10-25)
 
 ### Added
 - README screenshots, badges and a "Why use it" section; CONTRIBUTING.md and issue
