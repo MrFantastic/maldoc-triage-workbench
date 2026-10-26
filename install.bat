@@ -41,11 +41,11 @@ echo [3/5] Installing peepdf (optional)...
 if errorlevel 1 echo peepdf could not be installed. Everything else still works.
 echo.
 echo [4/5] Installing Excel 4.0 macro emulator (optional)...
-"%VPY%" -m pip install -r requirements-xlm.txt
+"%VPY%" -m pip install -r requirements-xlm.txt -c constraints.txt
 if errorlevel 1 echo XLMMacroDeobfuscator could not be installed. Everything else still works.
 echo.
 echo [5/5] Installing PDF decryption and hardened XML parsing (optional)...
-"%VPY%" -m pip install -r requirements-safety.txt
+"%VPY%" -m pip install -r requirements-safety.txt -c constraints.txt
 if errorlevel 1 echo Some optional packages could not be installed. Everything else still works.
 echo.
 echo ============================================================

@@ -749,7 +749,8 @@ class MainWindow(QMainWindow):
                 + "\n  ".join(missing) + "\n\n" if missing else
                 "Re-download Didier Stevens' tools (pdfid, pdf-parser, oledump, zipdump, rtfdump and plugins) "
                 "into the vendor folder?\n\n")
-        text += "Download them now from github.com/DidierStevens? (Needs internet access.)"
+        text += ("Download them now from github.com/DidierStevens? Only the pinned versions are installed, and "
+                 "only if every file matches its pinned SHA-256. (Needs internet access.)")
         if QMessageBox.question(self, "Analysis tools", text) != QMessageBox.StandardButton.Yes:
             if missing:
                 self.log("⚠ Analysis tools missing: " + ", ".join(missing) + ". Help → Download / update tools.")
@@ -764,12 +765,14 @@ class MainWindow(QMainWindow):
         pdfid_adapter.clear_cache()
         versions.clear()
         self._check_vendor_manifest()
-        changed = [ln.strip()[2:] for ln in r.text.splitlines() if ln.strip().startswith("! ") and "hash changed" in ln]
-        if changed:
-            QMessageBox.warning(self, "Tool scripts changed upstream",
-                                "These tools differ from the copies fetched last time:\n\n" + "\n".join(changed[:12])
-                                + "\n\nThat's normal after an upstream release, but review the change (or pin a "
-                                "known commit with setup_vendor.py --ref) before relying on the results.")
+        mismatched = [ln.strip()[2:] for ln in r.text.splitlines() if "SHA-256 mismatch" in ln]
+        if mismatched:
+            QMessageBox.critical(self, "Downloaded tools failed verification",
+                                 "These downloads don't match the hashes pinned in this version of the app, "
+                                 "so nothing was installed:\n\n" + "\n".join(mismatched[:12])
+                                 + "\n\nThat shouldn't happen. Treat it as possible tampering (or a rewritten "
+                                 "upstream commit) and don't use copies fetched by other means without checking.")
+            return
         still = self.missing_core_tools()
         if still:
             QMessageBox.warning(self, "Some tools are still missing",
@@ -790,6 +793,11 @@ class MainWindow(QMainWindow):
         if not scripts.vendor_enabled():        # REMnux edition: REMnux owns its tools
             return
         status, problems = vendor_manifest.verify(scripts.VENDOR_DIR)
+        if status == "UNVERIFIED":
+            self.log("⚠ The vendored tools were installed from an unpinned source and are UNVERIFIED: "
+                     + "; ".join(problems))
+            self.statusBar().showMessage("⚠ Vendored tools are UNVERIFIED (not the pinned versions): "
+                                         "see Help → Tool status", 0)
         if status == "MODIFIED":
             self.log("⚠ Vendored tool scripts changed since they were fetched: " + "; ".join(problems))
             self.statusBar().showMessage("⚠ A vendored tool changed since it was fetched: see Help → Tool status",

@@ -28,10 +28,11 @@ if ! "$PY" -m venv --system-site-packages .venv; then
   echo "Could not create it: sudo apt install python3-venv"; exit 1
 fi
 VPY=.venv/bin/python
+PIPC=""; [ -f constraints.txt ] && PIPC="-c constraints.txt"   # the exact versions CI tests
 
 echo "[2/3] Installing what REMnux doesn't already provide..."
 "$VPY" -c 'import PySide6' 2>/dev/null && echo "  GUI (PySide6): already available" || \
-  "$VPY" -m pip install --quiet "PySide6>=6.6" || { echo "Could not install PySide6 (internet needed once)."; exit 1; }
+  "$VPY" -m pip install --quiet "PySide6>=6.6" $PIPC || { echo "Could not install PySide6 (internet needed once)."; exit 1; }
 # module:pip requirement:what needs it (oletools is required: Office triage and macro analysis use it)
 for item in "oletools:oletools>=0.60.2:REQUIRED for Office triage and macro analysis" \
             "msoffcrypto:msoffcrypto-tool>=5.4:Office decryption" \
@@ -40,7 +41,7 @@ for item in "oletools:oletools>=0.60.2:REQUIRED for Office triage and macro anal
   mod="${item%%:*}"; rest="${item#*:}"; req="${rest%%:*}"; what="${rest#*:}"
   if "$VPY" -c "import $mod" 2>/dev/null; then
     echo "  $mod: using REMnux's copy"
-  elif "$VPY" -m pip install --quiet "$req"; then
+  elif "$VPY" -m pip install --quiet "$req" $PIPC; then
     echo "  $mod: installed"
   else
     echo "  $mod: could not be installed (internet needed once): $what will be unavailable"

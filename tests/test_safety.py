@@ -375,8 +375,10 @@ class ArtifactTests(unittest.TestCase):
                 with open(os.path.join(d, rel), "w") as fh:
                     fh.write("# tool\n")
             self.assertEqual(vendor_manifest.verify(d)[0], "no manifest")
-            vendor_manifest.record(d, "test")
-            self.assertEqual(vendor_manifest.verify(d), ("verified", []))
+            vendor_manifest.record(d, "test")           # not pinned: consistent, but UNVERIFIED
+            status, problems = vendor_manifest.verify(d)
+            self.assertEqual(status, "UNVERIFIED")
+            self.assertTrue(problems and "pinned" in problems[-1])
             with open(os.path.join(d, "pdfid.py"), "a") as fh:
                 fh.write("import os\n")
             status, problems = vendor_manifest.verify(d)

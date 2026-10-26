@@ -50,13 +50,13 @@ VPY=.venv/bin/python
 
 echo "[2/4] Downloading the analysis tools and installing core packages..."
 "$VPY" setup_vendor.py --pip || { echo "Setup failed (no internet, or github.com / pypi.org blocked?)"; exit 1; }
-"$VPY" -m pip install -r requirements-safety.txt || echo "  (optional) PDF decryption / hardened XML packages could not be installed."
+"$VPY" -m pip install -r requirements-safety.txt -c constraints.txt || echo "  (optional) PDF decryption / hardened XML packages could not be installed."
 
 echo "[3/4] Installing peepdf (optional)..."
 "$VPY" setup_vendor.py --peepdf || echo "  peepdf could not be installed. Everything else still works."
 
 echo "[4/4] Installing the Excel 4.0 macro emulator (optional)..."
-"$VPY" -m pip install -r requirements-xlm.txt || echo "  XLMMacroDeobfuscator could not be installed. Everything else still works."
+"$VPY" -m pip install -r requirements-xlm.txt -c constraints.txt || echo "  XLMMacroDeobfuscator could not be installed. Everything else still works."
 
 if command -v ldconfig >/dev/null 2>&1 && ! ldconfig -p | grep -q libxcb-cursor; then
   echo "note: the GUI needs libxcb-cursor0. If it won't start: sudo apt install libxcb-cursor0"

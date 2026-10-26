@@ -3,6 +3,29 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Security
+- **Pinned, verified tool downloads.** `setup_vendor.py` (and Help → Download / update
+  tools) now fetches Didier Stevens' tools only from one pinned DidierStevensSuite commit
+  and only if every file matches a SHA-256 recorded in `app/core/vendor_pins.py`. Those
+  hashes were computed when the pin was made and cross-checked against a git clone,
+  GitHub's raw-file service, the GitHub API and REMnux's own copies, not taken from
+  whatever downloads at install time. Any mismatch or missing required tool installs
+  nothing (fail closed). Previously the default was the moving `master` branch, with
+  hashes recorded after download (trust on first use).
+- Other revisions need `--ref <commit> --allow-unverified` and show as UNVERIFIED in
+  Help → Tool status. Pinned files are checked against the pins themselves, so
+  re-recording the manifest can't hide a changed tool.
+- `setup_vendor.py --update-pin <commit>` (maintainers) moves the pin only if the raw
+  files match the commit's tree from the GitHub API.
+- `constraints.txt`: exact versions of every Python package for Python 3.9-3.13 on
+  Windows and Linux; all installers and CI use it. (Linux now needs glibc 2.34+, e.g.
+  Ubuntu 22.04 or newer, for the pinned GUI library.)
+- Release zips carry signed build provenance (`gh attestation verify`).
+- CI installs the pinned tools for real on Linux and Windows and checks the
+  fail-closed paths.
+
 ## 1.4.2 (2026-10-25)
 
 ### Added

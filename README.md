@@ -61,7 +61,10 @@ No git needed; pick the file for your machine:
 | **Other Linux** (no REMnux tools) | `maldoc-triage-workbench-<version>-standard.zip` | `./install.sh`, then `./start.sh` |
 
 `SHA256SUMS.txt` on the same page lists each zip's SHA-256. Check it before copying a
-download into your analysis VM: `sha256sum -c SHA256SUMS.txt --ignore-missing`.
+download into your analysis VM: `sha256sum -c SHA256SUMS.txt --ignore-missing`. Each zip
+also carries signed build provenance, so you can confirm it was built by this repository's
+release workflow from a specific commit:
+`gh attestation verify maldoc-triage-workbench-<version>-remnux.zip --repo MrFantastic/maldoc-triage-workbench`.
 
 Cloned the repository instead? On REMnux, `./install.sh` notices and offers to set up the
 REMnux edition.
@@ -177,19 +180,21 @@ python setup_vendor.py --peepdf         # peepdf overview + console (GPLv3), ski
 pip install -r requirements-safety.txt   # pikepdf (Decrypt PDF) and defusedxml
 ```
 
-Pinning and verifying the vendored tools:
+**Pinned, verified tools.** `setup_vendor.py` installs Didier Stevens' tools from one
+pinned DidierStevensSuite commit, and only if every file matches the SHA-256 recorded in
+[`app/core/vendor_pins.py`](app/core/vendor_pins.py). Those hashes were computed when the pin
+was made and cross-checked against independent copies (a git clone, GitHub's raw-file
+service, and the copies REMnux ships), never from whatever happens to download at
+install time. If any file differs, **nothing is installed**. The app re-checks the
+hashes at startup and **Help → Tool status** shows `[verified]`, `[CHANGED]` or
+`[UNVERIFIED]` per tool.
 
 ```bash
-python setup_vendor.py --ref <commit>    # fetch a specific DidierStevensSuite commit or tag
-python setup_vendor.py --record          # re-record vendor/manifest.json after copying tools in
+python setup_vendor.py --ref <commit> --allow-unverified   # a different commit: installed, shown as UNVERIFIED
+python setup_vendor.py --update-pin <commit>               # maintainers: move the pin, then review the diff
 ```
 
-Every fetch records each tool's SHA-256 in `vendor/manifest.json` and lists any
-file whose hash changed since the previous fetch. The app re-checks the hashes at
-startup and warns if a tool script changed; **Help → Tool status** shows
-`[verified]` or `[CHANGED]` per tool. This proves the scripts are the ones that
-were fetched, not that the fetch was genuine: pin a commit with `--ref` and
-compare the hashes with a known-good copy (e.g. REMnux) to close that gap.
+Python packages are installed at the exact versions in `constraints.txt` (the versions CI tests).
 
 - **REMnux:** use the REMnux edition instead: it uses REMnux's own tools and downloads nothing.
 - **Offline:** `python setup_vendor.py --copy-from C:\path\to\DidierStevensSuite`

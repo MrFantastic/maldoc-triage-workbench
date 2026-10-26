@@ -5,7 +5,7 @@ import sys
 
 from .. import edition
 from ..adapters import macro_adapter, office_adapter, pdf_crypto, pdfid_adapter, peepdf_adapter, scripts, versions
-from ..core import vendor_manifest
+from ..core import vendor_manifest, vendor_pins
 
 
 def status_lines() -> list[str]:
@@ -53,7 +53,9 @@ def status_lines() -> list[str]:
     lines.append(row("Python", vs.get("Python", ""), sys.executable))
     if scripts.vendor_enabled():
         status, problems = vendor_manifest.verify(vdir)
-        lines.append(f"vendor hashes: {status}" + "".join(f"\n    {x}" for x in problems))
+        pin = f"pinned DidierStevensSuite {vendor_pins.COMMIT[:12]} ({vendor_pins.COMMIT_DATE})"
+        lines.append(f"vendor hashes: {status}" + (f" against the {pin}" if status == "verified" else "")
+                     + "".join(f"\n    {x}" for x in problems))
     else:
         lines.append("vendor hashes: not used (REMnux maintains its own tools; update with  sudo remnux upgrade)")
     return lines
