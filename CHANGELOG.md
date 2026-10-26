@@ -25,6 +25,15 @@ All notable changes to Maldoc Triage Workbench. Versions follow
 - Release zips carry signed build provenance (`gh attestation verify`).
 - CI installs the pinned tools for real on Linux and Windows and checks the
   fail-closed paths.
+- **Timeouts and Stop now end everything a tool started**, not just the tool. On
+  Linux/macOS every tool starts through a small launcher (`run.py --contain`) in its
+  own session; on Linux it is also a child subreaper, so a descendant that detaches
+  (double fork / `setsid`) is still found and killed. On Windows every tool runs in its
+  own Job Object, assigned before the process can run (it starts suspended); closing
+  the job kills anything left. Previously only the direct child was killed.
+- Windows now has a memory cap too: 3 GB per tool process (Job Object), plus at most
+  32 processes per tool and no crash-reporting dialogs. If a tool can't be put in its
+  job it isn't run (fail closed).
 
 ## 1.4.2 (2026-10-25)
 

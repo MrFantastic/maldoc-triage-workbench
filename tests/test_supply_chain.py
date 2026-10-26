@@ -18,6 +18,9 @@ sys.path.insert(0, ROOT)
 
 from app.core import vendor_manifest, vendor_pins  # noqa: E402
 
+if not os.path.isfile(os.path.join(ROOT, "setup_vendor.py")):   # the REMnux edition never downloads tools
+    raise unittest.SkipTest("setup_vendor.py is in the source repository and standard edition only")
+
 
 def _load_setup_vendor():
     spec = importlib.util.spec_from_file_location("mtw_setup_vendor", os.path.join(ROOT, "setup_vendor.py"))

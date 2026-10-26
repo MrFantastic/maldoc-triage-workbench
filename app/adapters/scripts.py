@@ -8,7 +8,9 @@ crashes a parser can be killed without taking the app with it. In a frozen
 isolation and timeouts apply without a Python installation.
 
 Processes are tagged with the GUI's session generation so that closing a
-sample (or pressing Stop) kills everything still running for it.
+sample (or pressing Stop) kills everything still running for it, including anything
+the tool started: on Linux/macOS every tool starts through run.py --contain in its own
+session (app/contain.py), on Windows in its own Job Object (winjob.py).
 """
 from __future__ import annotations
 
@@ -18,10 +20,14 @@ import os
 import re
 import runpy
 import shutil
+import signal
 import subprocess
 import sys
 import threading
+import time
 from dataclasses import dataclass
+
+from ..contain import CONTAIN_FAILED
 
 APP_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 VENDOR_DIR = os.path.join(getattr(sys, "_MEIPASS", APP_ROOT), "vendor")
@@ -38,6 +44,7 @@ _INPROC_LOCK = threading.Lock()
 # ---------------------------------------------------------------- process tracking
 _tls = threading.local()
 _ACTIVE: dict[subprocess.Popen, int] = {}
+_JOBS: dict[subprocess.Popen, int] = {}   # Windows: Job Object handle per process (guarded by _ACTIVE_LOCK)
 _STOPPED: set[int] = set()          # pids killed on purpose (Stop / sample closed)
 _ACTIVE_LOCK = threading.Lock()
 PERSISTENT = -1                     # generation for jobs that outlive a sample (tool download, help)
@@ -60,13 +67,33 @@ def kill_generation(predicate) -> int:
         targets = [p for p, g in _ACTIVE.items() if g != PERSISTENT and predicate(g)]
         for p in targets:
             _STOPPED.add(p.pid)
-    for p in targets:
-        try:
-            p.kill()
-            killed += 1
-        except OSError:
-            pass
+    for p in targets:      # in the background: on POSIX the escalation can take up to ~2 s
+        threading.Thread(target=_kill_tree, args=(p,), daemon=True).start()
+        killed += 1
     return killed
+
+
+def _kill_tree(proc: subprocess.Popen) -> None:
+    """Kill a tool process and everything it started."""
+    if os.name == "nt":
+        with _ACTIVE_LOCK:              # never terminate a job handle that's being closed
+            job = _JOBS.get(proc, 0)
+            if job:
+                from . import winjob
+                winjob.terminate(job)
+        with contextlib.suppress(OSError):
+            proc.kill()
+        return
+    # the launcher (run.py --contain) leads the group: SIGTERM makes it kill every descendant
+    with contextlib.suppress(OSError):
+        os.killpg(proc.pid, signal.SIGTERM)
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline and proc.poll() is None:
+        time.sleep(0.05)
+    with contextlib.suppress(OSError):
+        os.killpg(proc.pid, signal.SIGKILL)
+    with contextlib.suppress(OSError):
+        proc.kill()
 
 
 def active_count() -> int:
@@ -255,15 +282,33 @@ def run_cmd(cmd: list[str], display: str, timeout: int = DEFAULT_TIMEOUT, cwd: s
     """Run a command with a time limit and an output cap; Stop or opening another file kills it."""
     env = tool_env()
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)  # no console flashes on Windows
+    windows = os.name == "nt"
+    if windows:
+        from . import winjob
+        flags |= winjob.CREATE_SUSPENDED   # resumed only once it's inside its Job Object
+    launch = cmd if windows else self_command("--contain", "--", *cmd)
     limit = max_output or MAX_OUTPUT
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        proc = subprocess.Popen(launch, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 stdin=subprocess.PIPE if input_bytes is not None else subprocess.DEVNULL,
-                                env=env, cwd=cwd, creationflags=flags)
+                                env=env, cwd=cwd, creationflags=flags, start_new_session=not windows)
     except OSError as exc:
         return RunResult(display, b"", f"Could not start: {exc}", 127)
+    job = 0
+    if windows:
+        try:
+            job = winjob.contain(int(proc._handle))
+        except OSError as exc:            # fail closed: the process was killed before it ran
+            proc.wait()
+            for pipe in (proc.stdin, proc.stdout, proc.stderr):
+                if pipe is not None:
+                    pipe.close()
+            return RunResult(display, b"", f"Not run: the tool could not be started inside its Windows "
+                             f"Job Object ({exc}).", CONTAIN_FAILED)
     with _ACTIVE_LOCK:
         _ACTIVE[proc] = current_job_generation()
+        if job:
+            _JOBS[proc] = job
     chunks: list[bytes] = []
     total = 0
     truncated = False
@@ -308,12 +353,15 @@ def run_cmd(cmd: list[str], display: str, timeout: int = DEFAULT_TIMEOUT, cwd: s
     try:
         proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
-        proc.kill()
+        _kill_tree(proc)
         timed_out = True
         proc.wait()
     finally:
         with _ACTIVE_LOCK:
             _ACTIVE.pop(proc, None)
+            job = _JOBS.pop(proc, 0)
+            if job:                       # KILL_ON_JOB_CLOSE: anything the tool left running dies now
+                winjob.close(job)
             stopped = proc.pid in _STOPPED
             _STOPPED.discard(proc.pid)
     for t in readers:

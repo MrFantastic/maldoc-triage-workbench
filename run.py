@@ -2,7 +2,8 @@
 """Launch Maldoc Triage Workbench:  python run.py [sample]
 
 Also the entry point for the helper processes that parse hostile files
-(run.py --worker / --run-script / --run-module / --run-callable).
+(run.py --worker / --run-script / --run-module / --run-callable), and the
+launcher every tool starts through on Linux and macOS (run.py --contain).
 """
 import os
 import sys
@@ -11,6 +12,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 def _main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == "--contain":   # tool launcher (Linux/macOS); keep it light
+        from app.contain import contain_main
+        return contain_main(sys.argv[2:])
     from app.worker import dispatch
     code = dispatch(sys.argv)          # helper modes never import Qt
     if code is not None:
