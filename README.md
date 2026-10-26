@@ -41,8 +41,10 @@ explanation and next steps for each one.
 - **It teaches the workflow.** Each finding explains what it is, when it's harmless, and the
   next steps, each with a button that does it and the equivalent command line to copy.
 - **Built to be safe with hostile files.** Every parser runs in its own time- and memory-limited
-  process, nothing from the sample is executed, and a tool that can't run makes the verdict
-  INCOMPLETE rather than "clean". See [Safety model](#safety-model).
+  process (on Linux, without network access), nothing from the sample is executed (apart from
+  XLM emulation, which you start yourself), and a tool that can't run makes the verdict
+  INCOMPLETE rather than "clean". It is not a sandbox: run it in an analysis VM. See
+  [Safety model](#safety-model).
 
 **Status: beta.** Developed and tested by one person, with harmless test files, on Windows
 and on REMnux (noble, October 2026 release) with REMnux's own tools. Real-world use is
@@ -225,41 +227,76 @@ If you're updating from an earlier version, re-run `python setup_vendor.py`.
 
 ## Safety model
 
-- Samples are opened read-only and never rendered or executed. Macro and JS code
-  is shown as text.
-- **Nothing from the sample runs.** The JavaScript engines peepdf can use
-  (STPyV8 / PyV8) are made unimportable for every tool the app starts, so even
-  where one is installed (as on some REMnux builds) no tool evaluates the
-  sample's JavaScript. peepdf console commands that run or emulate code
-  (`js_eval`, `js_analyse`, `js_vars`, `sctest`) are refused. The only emulation
-  is XLM formulas, by XLMMacroDeobfuscator, when you click Emulate.
-- **Every parser that reads the sample runs in its own process** with a time
-  limit, an output cap and (on Linux) a 3 GB memory cap: the external tools, and
-  also the in-app parsers (oletools, olefile, msoffcrypto, pdfid, zip/XML
-  parsing, PDF decryption, the JS beautifier). A file crafted to hang or crash a
-  parser can't take the app down, and the failure is reported as suspicious.
-  **Stop** in the status bar kills the current file's tools.
-- Opening another file drops every pending result from the previous one and
-  kills its tool processes, so results can't land on the wrong sample.
-- OOXML parts are read within a 512 MB total / 64 MB per-part budget (20,000
-  parts max); zip bombs and parts with DTD or entity declarations are flagged
-  and not parsed.
-- The original file is re-hashed on close, and the app warns if it changed.
-- Everything written out (streams, parts, objects, decrypted copies, carved
-  bytes, payloads) gets a `.bin` suffix in the output folder (default
-  `~/MTW_output`). File → Export artifacts packs them into a zip encrypted with
-  the password `infected` (ZipCrypto, which every unzip tool and sandbox reads;
-  its job is to keep AV and double-clicks away, not secrecy).
-- URLs and IPs are defanged in tables, findings, and reports. Text from the
-  sample is HTML-escaped wherever it's shown, and CSV exports are guarded
-  against spreadsheet formula injection.
-- Vendored tool scripts are hash-checked at startup (see Install).
-- App errors are written to `~/MTW_output/logs/` and shown in the log panel,
-  even when started with `pythonw`.
-- There's no network access, except a tool download you start, or peepdf's
-  `vtcheck` if you type it, which sends the hash only.
-- Run inside REMnux or an isolated VM. On Windows, add an exclusion for the
-  analysis folder or Defender will quarantine samples.
+The app is built for one situation: you open a file that was made to attack whoever
+looks at it. Its job is to show what's inside without running it, and to stop a file
+that attacks the *parsers* from taking the app down, tying up the machine, or reaching
+further than it has to. **The analysis VM is the security boundary**; the app adds
+layers inside it.
+
+### What the app protects against
+
+- **Sample content running.** Samples are opened read-only and never rendered or
+  executed; macro and JavaScript code is shown as text. The JavaScript engines peepdf
+  can use (STPyV8 / PyV8) are made unimportable for every tool the app starts, so even
+  where one is installed (as on some REMnux builds) no tool evaluates the sample's
+  JavaScript, and peepdf console commands that run or emulate code (`js_eval`,
+  `js_analyse`, `js_vars`, `sctest`) are refused. One exception, which you start
+  yourself: **Emulate** in the Macros tab runs XLMMacroDeobfuscator, which interprets
+  the sample's Excel 4.0 formulas in Python. It doesn't call Windows or run native code,
+  but it does evaluate the sample's logic, so treat it like running the sample.
+- **A file that hangs, crashes or exhausts a parser.** Every parser that reads the
+  sample runs in its own process: the external tools, and also the in-app parsers
+  (oletools, olefile, msoffcrypto, pdfid, zip/XML parsing, PDF decryption, the JS
+  beautifier). Each has a time limit, an output cap, a 3 GB memory cap and a CPU-time
+  limit; on Linux/macOS also a 1 GB limit on any file it writes and no core dumps, on
+  Windows at most 32 processes and no crash dialogs. A timeout, **Stop** (status bar) or
+  opening another file kills the tool *and everything it started* (Linux/macOS: its
+  own session, with the launcher as subreaper; Windows: a Job Object), and drops any
+  pending results so they can't land on the wrong sample. A failure is reported as
+  suspicious, and a file whose analysis didn't finish can't be rated clean.
+- **Archive tricks.** ZIP-based files get a structure check before Python's `zipfile`
+  reads them (end records, ZIP64 records, entry and directory budgets); a package that
+  fails it is never parsed. OOXML parts are read within a 512 MB total / 64 MB per-part
+  budget (20,000 parts max); zip bombs and parts with DTD or entity declarations are
+  flagged and not parsed.
+- **Tools reaching the network.** The app itself sends nothing. On Linux every tool runs
+  in its own empty network namespace (no network at all, not even localhost) where the
+  system allows unprivileged user namespaces, as REMnux and Ubuntu do; Help → Tool status
+  shows whether it's active. The exceptions are a tool download you start and a peepdf
+  `vtcheck` you type (it sends the file's hash to VirusTotal). On Windows and macOS the
+  app doesn't restrict the tools' network access.
+- **Leaking the app's environment.** Tools get only an allowlist of environment
+  variables (what Python needs to start, the locale, and the app's `MTW_*` settings), so
+  tokens, proxy settings, `PYTHONPATH` and the like never reach them.
+- **Injection through the output.** URLs and IPs are defanged in tables, findings and
+  reports; text from the sample is HTML-escaped wherever it's shown, and CSV exports are
+  guarded against spreadsheet formula injection. Everything written out (streams, parts,
+  objects, decrypted copies, carved bytes, payloads) gets a `.bin` suffix in the output
+  folder (default `~/MTW_output`). File → Export artifacts packs them into a zip
+  encrypted with the password `infected` (ZipCrypto, which every unzip tool and sandbox
+  reads; its job is to keep AV and double-clicks away, not secrecy).
+- **Tampered tool downloads** (standard edition). Didier Stevens' tools are downloaded
+  only from one pinned commit and installed only if every file matches its pinned
+  SHA-256, and they are hash-checked again at startup (see Install). Release zips carry
+  signed build provenance.
+- The original file is re-hashed on close, and the app warns if it changed. App errors
+  are written to `~/MTW_output/logs/` and shown in the log panel.
+
+### What it doesn't protect against
+
+- **A parser exploit that gets code execution.** A file that exploits a memory-safety
+  bug in a parser (for example in qpdf under pikepdf, in lxml, or in Python itself), or
+  a logic bug in a Python tool, runs code as your user. The layers above contain
+  resources and processes, not privileges: that code can read and write your files,
+  and on Windows and macOS use the network. This is why the app belongs in a
+  disposable analysis VM: REMnux or similar, a snapshot taken before you start, no
+  folders shared with the host, and a host-only or disconnected network.
+- **Mistakes in the tools' judgement.** The verdict is a triage aid built from the
+  tools' output. "No indicators found" means the tools found none, not that the file is
+  safe.
+- **The host.** Nothing here protects a machine that isn't isolated. On Windows, add a
+  Defender exclusion for the analysis folder only inside the analysis VM, or it will
+  quarantine samples.
 
 ## When the tools are updated
 

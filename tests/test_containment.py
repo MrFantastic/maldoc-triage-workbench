@@ -2,6 +2,7 @@
 started running (Linux/macOS: run.py --contain; Windows: a Job Object per tool)."""
 from __future__ import annotations
 
+import json
 import os
 import sys
 import tempfile
@@ -209,6 +210,67 @@ class ResourceLimitTests(unittest.TestCase):
         self.assertIn(b"core (0, 0)", r.stdout)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("File too large", r.stderr)
+
+
+class EnvironmentTests(unittest.TestCase):
+    """Tools see only an allowlist of the app's environment."""
+
+    def test_only_allowlisted_variables_reach_a_tool(self):
+        keys = ("GITHUB_TOKEN", "HTTPS_PROXY", "PYTHONSTARTUP", "PYTHONPATH", "MTW_TEST_SETTING", "PATH",
+                "PYTHONUTF8")
+        code = f"import json, os; print(json.dumps({{k: os.environ.get(k) for k in {keys!r}}}))"
+        with mock.patch.dict(os.environ, {"GITHUB_TOKEN": "secret", "HTTPS_PROXY": "http://proxy.invalid:1",
+                                          "PYTHONSTARTUP": "/nonexistent/startup.py",
+                                          "PYTHONPATH": "/nonexistent/injected", "MTW_TEST_SETTING": "1"}):
+            r = scripts.run_cmd([sys.executable, "-c", code], "env", 60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        seen = json.loads(r.stdout)
+        for gone in ("GITHUB_TOKEN", "HTTPS_PROXY", "PYTHONSTARTUP"):
+            self.assertIsNone(seen[gone], gone)
+        self.assertEqual(seen["PYTHONPATH"], scripts.NOJS_DIR)
+        self.assertEqual(seen["MTW_TEST_SETTING"], "1")
+        self.assertEqual(seen["PYTHONUTF8"], "1")
+        self.assertTrue(seen["PATH"])
+
+
+def _kernel_allows_network_namespaces() -> bool:
+    """Whether this system lets an unprivileged process enter its own network namespace and still
+    read the app's files (a root user whose files belong to others can't, e.g. in some CI sandboxes)."""
+    run_py = os.path.join(ROOT, "run.py")
+    code = (f"import sys; sys.path.insert(0, {ROOT!r}); from app.contain import isolate_network; "
+            f"ok = isolate_network(); open({run_py!r}, 'rb').close(); sys.exit(0 if ok else 1)")
+    import subprocess
+    return subprocess.run([sys.executable, "-c", code], capture_output=True, timeout=60).returncode == 0
+
+
+@unittest.skipUnless(sys.platform.startswith("linux"), "network namespaces are Linux-only")
+class NetworkTests(unittest.TestCase):
+    """Linux: a tool can't reach any network, not even a port on this machine, unless the run
+    is a download the user started (network=True)."""
+
+    def setUp(self):
+        import socket
+        self.server = socket.socket()
+        self.server.bind(("127.0.0.1", 0))
+        self.server.listen(5)
+        self.addCleanup(self.server.close)
+        port = self.server.getsockname()[1]
+        self.code = ("import socket\ntry:\n"
+                     f"    socket.create_connection(('127.0.0.1', {port}), timeout=5); print('connected')\n"
+                     "except OSError as e:\n    print('blocked', e)")
+
+    def test_tools_have_no_network(self):
+        if not _kernel_allows_network_namespaces():
+            self.skipTest("this system doesn't allow unprivileged network namespaces")
+        r = scripts.run_cmd([sys.executable, "-c", self.code], "net", 60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(r.stdout.startswith(b"blocked"), r.stdout)
+        self.assertIs(scripts.tools_have_network(), False)
+
+    def test_a_download_keeps_the_network(self):
+        r = scripts.run_cmd([sys.executable, "-c", self.code], "net", 60, network=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(r.stdout.startswith(b"connected"), r.stdout)
 
 
 if __name__ == "__main__":

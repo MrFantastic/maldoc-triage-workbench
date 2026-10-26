@@ -26,11 +26,11 @@ def locate() -> str | None:
     return scripts.locate_cli("peepdf", "peepdf.py", "peepdf-3")
 
 
-def _run(args: list[str], timeout: int) -> scripts.RunResult:
+def _run(args: list[str], timeout: int, network: bool = False) -> scripts.RunResult:
     tool = locate()
     if not tool:
         return scripts.RunResult("peepdf", b"", f"peepdf not found ({edition.hint('peepdf')}).", 127)
-    return scripts.run_script(tool, args, timeout, "peepdf")
+    return scripts.run_script(tool, args, timeout, "peepdf", network=network)
 
 
 def overview(path: str, timeout: int = 300) -> ToolResult:
@@ -213,7 +213,9 @@ def console(path: str, commands: list[str], timeout: int = 300) -> scripts.RunRe
         script = os.path.join(tmp, "commands.txt")
         with open(script, "w", encoding="utf-8") as fh:
             fh.write("\n".join(c for c in commands if c.strip()) + "\nexit\n")
-        r = _run(["-f", "-l", "-s", script, path], timeout)
+        # vtcheck is the one command that needs the network (it sends the file's hash to VirusTotal)
+        wants_net = any(c.strip().split()[:1] == ["vtcheck"] for c in commands if c.strip())
+        r = _run(["-f", "-l", "-s", script, path], timeout, network=wants_net)
         r.command = r.command.replace(script, "<commands>") + "   # " + " ; ".join(commands)
         return r
 

@@ -277,7 +277,7 @@ _quote = quote  # backwards-compatible alias
 
 
 def run_script(script_path: str, args: list[str], timeout: int = DEFAULT_TIMEOUT,
-               display_name: str | None = None, cwd: str | None = None) -> RunResult:
+               display_name: str | None = None, cwd: str | None = None, network: bool = False) -> RunResult:
     """Run a .py tool (or any executable) with args; capture stdout as bytes."""
     display = (display_name or os.path.basename(script_path)) + " " + " ".join(_quote(a) for a in args)
     is_py = script_path.lower().endswith(".py")
@@ -286,7 +286,7 @@ def run_script(script_path: str, args: list[str], timeout: int = DEFAULT_TIMEOUT
         cmd = [py, script_path] + args if py else self_command("--run-script", script_path, *args)
     else:
         cmd = [script_path] + args
-    return run_cmd(cmd, display, timeout, cwd=cwd)
+    return run_cmd(cmd, display, timeout, cwd=cwd, network=network)
 
 
 def run_module(module: str, args: list[str], display_name: str, timeout: int = DEFAULT_TIMEOUT,
@@ -318,22 +318,44 @@ def error_summary(text: str, tail: int = 800) -> str:
     return head if body == head else f"{head}\n\n{body}"
 
 
+# What a tool may see of the app's environment: what a Python tool needs to start, find its
+# files and print text (plus MTW_* settings). Everything else stays with the app: tokens and
+# credentials, proxy settings, PYTHONPATH / PYTHONSTARTUP / PYTHONHOME, LD_PRELOAD, DISPLAY, ...
+ENV_KEEP = frozenset({
+    "PATH", "HOME", "USER", "LOGNAME", "USERNAME", "LANG", "LANGUAGE", "TZ", "TERM",
+    "TMPDIR", "TMP", "TEMP", "LD_LIBRARY_PATH",
+    # Windows: Python and its libraries need these to start and find their folders
+    "SYSTEMROOT", "SYSTEMDRIVE", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "APPDATA",
+    "LOCALAPPDATA", "PROGRAMDATA", "PROGRAMFILES", "PROGRAMFILES(X86)", "COMMONPROGRAMFILES",
+    "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE", "OS",
+})
+ENV_KEEP_PREFIXES = ("LC_", "MTW_", "_PYI", "_MEIPASS")     # locale, app settings, frozen builds
+
+
 def tool_env() -> dict[str, str]:
-    """Environment for tool processes: UTF-8 output, and the JavaScript-engine blockers first on PYTHONPATH."""
-    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
-    old = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = NOJS_DIR + (os.pathsep + old if old else "")
+    """Environment for tool processes: an allowlist of the app's variables (ENV_KEEP), UTF-8
+    output, and only the JavaScript-engine blockers on PYTHONPATH."""
+    env = {k: v for k, v in os.environ.items()
+           if k.upper() in ENV_KEEP or k.upper().startswith(ENV_KEEP_PREFIXES)}
+    env.update(PYTHONIOENCODING="utf-8", PYTHONUTF8="1", PYTHONPATH=NOJS_DIR)
     return env
 
 
 def run_cmd(cmd: list[str], display: str, timeout: int = DEFAULT_TIMEOUT, cwd: str | None = None,
             input_bytes: bytes | None = None, max_output: int | None = None,
-            limits: dict | None = None) -> RunResult:
+            limits: dict | None = None, network: bool = False) -> RunResult:
     """Run a command with a time limit and an output cap; Stop or opening another file kills it.
 
     limits overrides the per-tool resource limits ({"mem", "cpu", "fsize"}; tests use small ones):
     memory 3 GB, CPU time 2 x timeout + 30 s, files written at most 1 GB, no core dumps.
-    Linux/macOS apply them in the launcher; Windows applies memory and CPU time in the Job Object."""
+    Linux/macOS apply them in the launcher; Windows applies memory and CPU time in the Job Object.
+    Unless network=True (a download the user started), Linux runs the tool with no network
+    where that works on this system (contain.isolate_network; see tools_have_network())."""
+    return _run_contained(cmd, display, timeout, cwd, input_bytes, max_output, limits,
+                          no_net=not network and _isolation_works())
+
+
+def _run_contained(cmd, display, timeout, cwd, input_bytes, max_output, limits, no_net: bool) -> RunResult:
     env = tool_env()
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)  # no console flashes on Windows
     windows = os.name == "nt"
@@ -342,7 +364,8 @@ def run_cmd(cmd: list[str], display: str, timeout: int = DEFAULT_TIMEOUT, cwd: s
         flags |= winjob.CREATE_SUSPENDED   # resumed only once it's inside its Job Object
     lim = {"mem": 3 * 1024 ** 3, "cpu": 2 * int(timeout) + 30, "fsize": 1024 ** 3}
     lim.update(limits or {})
-    launch = cmd if windows else self_command("--contain", "--mem", str(lim["mem"]), "--cpu", str(lim["cpu"]),
+    launch = cmd if windows else self_command("--contain", *(["--no-net"] if no_net else []),
+                                              "--mem", str(lim["mem"]), "--cpu", str(lim["cpu"]),
                                               "--fsize", str(lim["fsize"]), "--", *cmd)
     limit = max_output or MAX_OUTPUT
     try:
@@ -431,6 +454,39 @@ def run_cmd(cmd: list[str], display: str, timeout: int = DEFAULT_TIMEOUT, cwd: s
         err_text = (err_text + "\n" if err_text else "") + "Stopped by user."
     return RunResult(display, b"".join(chunks), err_text,
                      proc.returncode if proc.returncode is not None else -1, timed_out, truncated, stopped)
+
+
+_net_lock = threading.Lock()
+_net_state: list[bool] = []
+_NET_PROBE = ("import os, sys\nopen(sys.argv[1], 'rb').close()\n"   # can still read the app's own files
+              "print(os.readlink('/proc/self/ns/net'))")
+
+
+def _isolation_works() -> bool:
+    """Linux: True if a tool started with --no-net really gets its own network namespace and
+    can still read this app's files. Checked once, for real, with a throwaway process."""
+    if not sys.platform.startswith("linux") or getattr(sys, "frozen", False):
+        return False
+    with _net_lock:
+        if not _net_state:
+            r = _run_contained([sys.executable, "-I", "-c", _NET_PROBE, RUN_PY], "network check", 30,
+                               None, None, None, None, no_net=True)
+            theirs = r.stdout.decode("utf-8", "replace").strip()
+            try:
+                mine = os.readlink("/proc/self/ns/net")
+            except OSError:
+                mine = ""
+            _net_state.append(r.returncode == 0 and theirs.startswith("net:") and theirs != mine)
+        return _net_state[0]
+
+
+def tools_have_network() -> bool | None:
+    """Whether the tools the app starts can reach a network: False on Linux when each runs in
+    its own empty network namespace, True on Linux when this system doesn't allow that, None on
+    Windows / macOS (the app doesn't restrict the network there)."""
+    if not sys.platform.startswith("linux") or getattr(sys, "frozen", False):
+        return None
+    return not _isolation_works()
 
 
 def _run_inprocess(script_path: str, args: list[str], display: str) -> RunResult:

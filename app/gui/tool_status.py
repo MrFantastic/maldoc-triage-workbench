@@ -62,6 +62,12 @@ def status_lines() -> list[str]:
     lines.append(row("PDF decryption", f"{lib} {vs.get(lib, '')}".strip() if lib else "",
                      "available" if lib else f"unavailable ({edition.hint('pikepdf')})"))
     lines.append(row("Python", vs.get("Python", ""), sys.executable))
+    net = scripts.tools_have_network()
+    lines.append("network for tools: " + (
+        "blocked (each tool runs in its own empty network namespace)" if net is False else
+        "NOT blocked: this Linux doesn't allow unprivileged network namespaces; keep the VM's network "
+        "host-only" if net else
+        "not restricted by the app on this OS; keep the analysis VM's network host-only"))
     if scripts.vendor_enabled():
         status, problems = vendor_manifest.verify(vdir)
         pin = f"pinned DidierStevensSuite {vendor_pins.COMMIT[:12]} ({vendor_pins.COMMIT_DATE})"

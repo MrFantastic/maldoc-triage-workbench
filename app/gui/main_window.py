@@ -47,15 +47,20 @@ SAFETY_TEXT = (
     "<ul>"
     "<li>Run it inside REMnux or an isolated analysis VM, not on a production workstation.</li>"
     "<li>Samples are never rendered, opened in Office/Acrobat, or executed. JavaScript and macros are "
-    "shown as text only; nothing is emulated except XLM formulas, by XLMMacroDeobfuscator, on request.</li>"
-    "<li>Every parser that reads the sample runs in a separate process with a time limit, so a file "
-    "crafted to hang or crash a parser can't take the app down. <b>Stop</b> (status bar) ends them.</li>"
+    "shown as text only. The one exception is <b>Emulate</b> (Macros tab): XLMMacroDeobfuscator "
+    "interprets the sample's Excel 4.0 formulas, which evaluates the sample's logic.</li>"
+    "<li>Every parser that reads the sample runs in a separate process with time, memory and CPU "
+    "limits (on Linux also without network access), so a file crafted to hang, crash or exhaust a "
+    "parser can't take the app down. <b>Stop</b> (status bar) ends them and anything they started.</li>"
+    "<li>These layers contain a misbehaving parser; they are not a sandbox. A file that exploits a bug "
+    "in a parser could run code as you, which is why the VM matters.</li>"
     "<li>The original file is opened read-only and re-hashed when you close it.</li>"
     "<li>Extracted, decrypted and carved files are written with a <code>.bin</code> suffix to the output "
     "folder. File → Export artifacts packs them into a zip encrypted with the password "
     "<code>infected</code>.</li>"
-    "<li>URLs and IPs are defanged in findings and tables. Nothing is sent over the network, except a "
-    "tool download you start, or a peepdf <code>vtcheck</code> you type (it sends the hash only).</li>"
+    "<li>URLs and IPs are defanged in findings and tables. The app sends nothing over the network, "
+    "except a tool download you start, or a peepdf <code>vtcheck</code> you type (it sends the hash "
+    "only).</li>"
     "<li>On Windows, Defender may quarantine samples. Use an excluded analysis folder on the VM.</li>"
     "</ul>"
 )
@@ -758,7 +763,7 @@ class MainWindow(QMainWindow):
         self.log(f"Downloading tools: {py} {setup}")
         self.runner.submit_persistent(scripts.run_cmd, self._on_tools_downloaded,
                                       lambda m: QMessageBox.warning(self, "Download failed", m.splitlines()[0]),
-                                      [py, setup], "setup_vendor.py", 300)
+                                      [py, setup], "setup_vendor.py", 300, network=True)
 
     def _on_tools_downloaded(self, r) -> None:
         self.log(r.text)

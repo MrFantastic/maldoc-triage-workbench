@@ -19,7 +19,7 @@ All notable changes to Maldoc Triage Workbench. Versions follow
   re-recording the manifest can't hide a changed tool.
 - `setup_vendor.py --update-pin <commit>` (maintainers) moves the pin only if the raw
   files match the commit's tree from the GitHub API.
-- `constraints.txt`: exact versions of every Python package for Python 3.9-3.13 on
+- `constraints.txt`: exact versions of every Python package for Python 3.10-3.13 on
   Windows and Linux; all installers and CI use it. (Linux now needs glibc 2.34+, e.g.
   Ubuntu 22.04 or newer, for the pinned GUI library.)
 - Release zips carry signed build provenance (`gh attestation verify`).
@@ -45,6 +45,20 @@ All notable changes to Maldoc Triage Workbench. Versions follow
   parsed: it is identified by its signature only, gets a Medium "ZIP structure
   rejected before parsing" finding, and can't be rated clean (the Parts, preview and
   metadata views say why instead of reading it).
+- **No network for tools on Linux.** Every tool now starts in its own empty network
+  namespace (user + network namespace, no privileges needed), so a parser can't reach
+  any network, not even localhost. A tool download you start and peepdf's `vtcheck`
+  keep the network. The app checks once that it works on the system (it does on REMnux
+  and Ubuntu, which allow unprivileged user namespaces but deny them capabilities);
+  Help → Tool status says whether it's active. Tools also run with no_new_privs. Windows
+  and macOS are unchanged: keep the VM's network host-only.
+- **Tools see only an allowlist of environment variables**: what Python needs to start,
+  the locale, and `MTW_*` settings. Tokens, proxy settings, `PYTHONPATH`,
+  `PYTHONSTARTUP`, `LD_PRELOAD` and the rest stay with the app.
+- **README: a threat model.** "Safety model" now says what the app protects against and
+  what it doesn't (a parser exploit that gets code execution runs as you: the VM is the
+  boundary), and that XLM emulation does evaluate the sample's logic. The in-app safety
+  notice says the same.
 
 ### Changed
 - **REMnux edition: REMnux's own copy of every tool and library.** REMnux installs each

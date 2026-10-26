@@ -16,9 +16,16 @@ safely set things up that can't be done from the multi-threaded GUI:
     (FILE_LIMIT) and no core dumps. The GUI can't set these itself without affecting
     its own process.
 
-This is cleanup and fault containment, not a security sandbox: code that compromises a
-parser runs as the same user and could, for example, kill the launcher first. The
-analysis VM is the security boundary.
+  * with --no-net (every tool except a download you start), on Linux it moves into a new
+    user + network namespace first: the tool then has no network at all, not even
+    localhost. It needs no privileges where the kernel allows unprivileged user
+    namespaces (Ubuntu / REMnux do, while denying them any capabilities); where it isn't
+    allowed the tool runs with the VM's network, and Help -> Tool status says so.
+    It also sets no_new_privs, so nothing the tool runs can gain privileges (setuid).
+
+This is containment, not a full sandbox: code that compromises a parser still runs as
+the same user, can read and write that user's files and could, for example, kill the
+launcher first. The analysis VM is the security boundary.
 """
 from __future__ import annotations
 
@@ -31,6 +38,8 @@ CONTAIN_FAILED = 125     # the tool could not be started inside its container
 MEMORY_LIMIT = 3 * 1024 ** 3
 FILE_LIMIT = 1024 ** 3
 DEFAULT_CPU = 600
+CLONE_NEWUSER = 0x10000000
+CLONE_NEWNET = 0x40000000
 
 
 def apply_limits(mem: int = MEMORY_LIMIT, cpu: int = DEFAULT_CPU, fsize: int = FILE_LIMIT) -> list[str]:
@@ -59,14 +68,54 @@ def apply_limits(mem: int = MEMORY_LIMIT, cpu: int = DEFAULT_CPU, fsize: int = F
 
 def _set_subreaper() -> bool:
     """Linux: PR_SET_CHILD_SUBREAPER, so orphaned descendants are re-parented to us."""
-    if not sys.platform.startswith("linux"):
-        return False
+    return sys.platform.startswith("linux") and _prctl(36, 1)     # 36 = PR_SET_CHILD_SUBREAPER
+
+
+def _prctl(option: int, value: int) -> bool:
     try:
         import ctypes
-        libc = ctypes.CDLL(None, use_errno=True)
-        return libc.prctl(36, 1, 0, 0, 0) == 0          # 36 = PR_SET_CHILD_SUBREAPER
+        return ctypes.CDLL(None, use_errno=True).prctl(option, value, 0, 0, 0) == 0
     except (OSError, AttributeError):
         return False
+
+
+def isolate_network() -> bool:
+    """Linux: move this process (and everything it starts) into a new user + network
+    namespace. The new network namespace has only a loopback interface, and it is down,
+    so no connection can be made anywhere. For an ordinary user the new user namespace
+    gets no uid mapping, so a program executed inside it has no capabilities (root keeps an
+    identity mapping, see _map_ids). Must be called while single-threaded.
+    Returns False, changing nothing, where the kernel doesn't allow it."""
+    if not sys.platform.startswith("linux"):
+        return False
+    flags = CLONE_NEWUSER | CLONE_NEWNET
+    uid = os.geteuid()
+    try:
+        if hasattr(os, "unshare"):                 # Python 3.12+
+            os.unshare(flags)
+        else:
+            import ctypes
+            if ctypes.CDLL(None, use_errno=True).unshare(flags) != 0:
+                return False
+    except (OSError, AttributeError):
+        return False
+    _map_ids(uid)
+    return True
+
+
+def _map_ids(uid: int) -> None:
+    """Root only: map every uid/gid into the new user namespace unchanged, so root keeps its
+    access to files other users own. An ordinary user needs no mapping (the kernel checks
+    the real ids, so its own files stay readable; ids just show as 'nobody' inside), and
+    Ubuntu / REMnux would refuse one anyway, with an audit message each time."""
+    if uid != 0:
+        return
+    for path in ("/proc/self/uid_map", "/proc/self/gid_map"):
+        try:
+            with open(path, "w") as fh:
+                fh.write("0 0 4294967295")
+        except OSError:
+            return
 
 
 def descendants(root: int) -> list[int]:
@@ -124,9 +173,15 @@ def sweep() -> int:
 
 
 def contain_main(argv: list[str]) -> int:
-    """argv: [--cpu S] [--mem BYTES] [--fsize BYTES] -- command args..."""
+    """argv: [--no-net] [--cpu S] [--mem BYTES] [--fsize BYTES] -- command args..."""
     limits = {"cpu": DEFAULT_CPU, "mem": MEMORY_LIMIT, "fsize": FILE_LIMIT}
-    while argv and argv[0] != "--" and argv[0].lstrip("-") in limits and len(argv) > 1:
+    no_net = False
+    while argv and argv[0] != "--":
+        if argv[0] == "--no-net":
+            no_net, argv = True, argv[1:]
+            continue
+        if argv[0].lstrip("-") not in limits or len(argv) < 2:
+            break
         try:
             limits[argv[0].lstrip("-")] = int(argv[1])
         except ValueError:
@@ -139,6 +194,10 @@ def contain_main(argv: list[str]) -> int:
         sys.stderr.write("run.py --contain: no command\n")
         return 2
     _set_subreaper()
+    if no_net:
+        isolate_network()        # best effort: see the module docstring
+    if sys.platform.startswith("linux"):
+        _prctl(38, 1)            # 38 = PR_SET_NO_NEW_PRIVS
     apply_limits(limits["mem"], limits["cpu"], limits["fsize"])
 
     def on_signal(signum, _frame):

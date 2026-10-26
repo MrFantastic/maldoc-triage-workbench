@@ -17,14 +17,20 @@ a harmless file that reproduces the issue.
 
 Anything that breaks the app's safety model (see "Safety model" in the README):
 
-- sample content being executed, rendered, or reaching the network
-- a crafted file escaping a parser's isolated process, timeout or output limit
+- sample content being executed or rendered (other than XLM emulation, which the user starts)
+- a tool reaching the network on Linux while Help → Tool status says it's blocked
+- a crafted file escaping a parser's process, timeout, output or resource limits, or a
+  process a tool started surviving a timeout, Stop, or closing the sample
+- a tool seeing environment variables outside the allowlist (`app/adapters/scripts.py`)
 - extracted files written without the `.bin` suffix, or outside the output folder
 - untrusted text from a sample interpreted as HTML or as a spreadsheet formula
 - a JavaScript engine becoming usable by any tool the app starts
 
 Bugs in the underlying tools (pdfid, pdf-parser, oledump, oletools, peepdf, ...)
-belong with their own projects.
+and libraries (pikepdf / qpdf, lxml, Python) belong with their own projects. A file
+that gets code execution through one of them is outside what the app can prevent
+(see "What it doesn't protect against" in the README), but tell us if the app makes
+it easier or its limits fail to contain it.
 
 ## Supported versions
 
