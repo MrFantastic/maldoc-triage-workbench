@@ -46,6 +46,12 @@ All notable changes to Maldoc Triage Workbench. Versions follow
   rejected before parsing" finding, and can't be rated clean (the Parts, preview and
   metadata views say why instead of reading it).
 
+### Changed
+- **Python 3.10 or newer is now required** (3.12+ still recommended). Python 3.9 reached
+  end of life in October 2025, gets no security fixes, and current CI runners no longer
+  provide it. REMnux (Python 3.12) and every supported Windows Python are unaffected;
+  the installers say so if an older Python is found.
+
 ## 1.4.2 (2026-10-25)
 
 ### Added

@@ -11,15 +11,15 @@ if errorlevel 1 (
   echo.
   echo Python was not found.
   echo Install Python from https://www.python.org/downloads/ ^(3.12 or newer
-  echo recommended; 3.9 is the minimum^) and tick "Add python.exe to PATH" on the
+  echo recommended; 3.10 is the minimum^) and tick "Add python.exe to PATH" on the
   echo first installer screen. Then run install.bat again.
   pause
   exit /b 1
 )
-python -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)"
+python -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)"
 if errorlevel 1 (
   echo.
-  echo Python 3.9 or newer is needed. Found:
+  echo Python 3.10 or newer is needed. Found:
   python --version
   pause
   exit /b 1

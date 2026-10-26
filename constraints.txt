@@ -1,71 +1,55 @@
-# Exact versions of every Python package the standard edition installs, for Python 3.9-3.13
+# Exact versions of every Python package the standard edition installs, for Python 3.10-3.13
 # on Windows and Linux (glibc 2.34+, e.g. Ubuntu 22.04 or newer / REMnux noble). Installers
 # pass this with  pip install ... -c constraints.txt  so every install gets the versions CI tests.
 #
 # Regenerate (then review the diff and let CI run on every Python version):
-#   uv pip compile all.in --universal --python-version 3.9 --no-header --no-annotate -o constraints.txt
+#   uv pip compile all.in --universal --python-version 3.10 --no-header --no-annotate -o constraints.txt
 # where all.in lists requirements*.txt plus the peepdf dependencies from setup_vendor.py,
 # and add peepdf-3 by hand (it's installed with --no-deps to skip its JavaScript engine).
 peepdf-3==6.0.3
 asn1crypto==1.5.1
 certifi==2026.10.23
-cffi==2.0.0 ; python_full_version < '3.10' and platform_python_implementation != 'PyPy'
-cffi==2.1.1 ; python_full_version >= '3.10' and platform_python_implementation != 'PyPy'
+cffi==2.1.1 ; platform_python_implementation != 'PyPy'
 charset-normalizer==3.5.2
 colorama==0.4.6
 colorclass==2.2.2
-cryptography==47.0.0 ; python_full_version <= '3.9'
-cryptography==50.0.2 ; python_full_version > '3.9'
+cryptography==50.0.2
 defusedxml==0.7.1
-deprecated==1.3.1 ; python_full_version < '3.10'
 easygui==0.98.3
 editorconfig==0.17.1
 idna==3.20
 jsbeautifier==2.0.3
 lark-parser==0.12.0
 lxml==6.1.3
-msoffcrypto-tool==5.4.2 ; python_full_version < '3.10'
-msoffcrypto-tool==6.0.0 ; python_full_version >= '3.10'
+msoffcrypto-tool==6.0.0
 olefile==0.47
 oletools==0.60.2
 packaging==26.3
 pcodedmp==1.2.6
-pikepdf==9.11.0 ; python_full_version < '3.10'
 pikepdf==10.13.0.post1 ; python_full_version == '3.10.*'
 pikepdf==10.17.0 ; python_full_version >= '3.11'
-pillow==11.3.0 ; python_full_version < '3.10'
 pillow==12.3.0 ; python_full_version == '3.10.*'
 pillow==13.0.0 ; python_full_version >= '3.11'
-prettytable==3.16.0 ; python_full_version < '3.10'
-prettytable==3.18.0 ; python_full_version >= '3.10'
-pycparser==2.23 ; python_full_version < '3.10' and implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+prettytable==3.18.0
 pycparser==3.11 ; python_full_version == '3.10.*' and implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
 pycparser==3.12 ; python_full_version >= '3.11' and implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
 pyparsing==3.3.3
 pypdf==6.21.2
-pyside6==6.10.3 ; python_full_version < '3.10'
-pyside6==6.12.0 ; python_full_version >= '3.10'
-pyside6-addons==6.10.3 ; python_full_version < '3.10'
-pyside6-addons==6.12.0 ; python_full_version >= '3.10'
-pyside6-essentials==6.10.3 ; python_full_version < '3.10'
-pyside6-essentials==6.12.0 ; python_full_version >= '3.10'
-pyside6-pdf==6.12.0.140 ; python_full_version >= '3.10'
-pyside6-webengine==6.12.0.140 ; python_full_version >= '3.10'
+pyside6==6.12.0
+pyside6-addons==6.12.0
+pyside6-essentials==6.12.0
+pyside6-pdf==6.12.0.140
+pyside6-webengine==6.12.0.140
 pythonaes==1.0
 pyxlsb2==0.0.9
-requests==2.32.5 ; python_full_version < '3.10'
-requests==2.34.2 ; python_full_version >= '3.10'
-roman==5.1 ; python_full_version < '3.10'
-roman==5.2 ; python_full_version >= '3.10'
-shiboken6==6.10.3 ; python_full_version < '3.10'
-shiboken6==6.12.0 ; python_full_version >= '3.10'
+requests==2.34.2
+roman==5.2
+shiboken6==6.12.0
 tomli==2.5.0 ; python_full_version == '3.10.*'
 typing-extensions==4.16.0 ; python_full_version < '3.11'
 untangle==1.2.1
-urllib3==2.6.3 ; python_full_version < '3.10'
-urllib3==2.8.0 ; python_full_version >= '3.10'
+urllib3==2.8.0
 wcwidth==0.9.4
 win-unicode-console==0.5 ; platform_python_implementation != 'PyPy' and sys_platform == 'win32'
-wrapt==2.5.1 ; python_full_version < '3.10'
 xlmmacrodeobfuscator==0.2.7
 xlrd2==1.3.4

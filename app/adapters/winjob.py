@@ -10,7 +10,7 @@ can't start a child before the job applies. The job:
   * suppresses the Windows Error Reporting dialog when a parser crashes
 
 If the job can't be set up the process is killed and not run (fail closed).
-Nested jobs are supported on every Windows version Python 3.9+ runs on.
+Nested jobs are supported on every Windows version Python 3.10+ runs on.
 
 This is cleanup and resource containment, not a security sandbox: the tool still runs
 as the same user. The analysis VM is the security boundary.

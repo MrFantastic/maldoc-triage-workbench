@@ -12,7 +12,7 @@ description = "A guided, safety-hardened desktop front-end for the REMnux maldoc
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Alexander Raymond" }]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["malware", "maldoc", "pdf", "office", "triage", "remnux", "oletools"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -38,7 +38,7 @@ xlm = ["XLMMacroDeobfuscator>=0.2.7"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py310"
 extend-exclude = ["vendor"]
 
 [tool.ruff.lint]

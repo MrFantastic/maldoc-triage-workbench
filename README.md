@@ -145,7 +145,7 @@ Help → Tool status shows which edition is running and where each tool was foun
 
 ### Windows, quick way
 
-1. Install Python from python.org (3.12 or newer recommended; 3.9 is the minimum). On the
+1. Install Python from python.org (3.12 or newer recommended; 3.10 is the minimum). On the
    first installer screen, tick **"Add python.exe to PATH"**.
 2. Extract this folder somewhere permanent, e.g. `C:\Tools\maldoc-triage-workbench`.
 3. Double-click **`install.bat`** (one time, needs internet access to github.com and pypi.org).
@@ -164,7 +164,7 @@ If the window doesn't open under an X11 session, install Qt's missing library:
 
 ### Manual
 
-Python 3.9 or newer (3.12+ recommended) on Windows or Linux.
+Python 3.10 or newer (3.12+ recommended) on Windows or Linux.
 
 ```bash
 pip install -r requirements.txt          # PySide6, oletools, msoffcrypto-tool

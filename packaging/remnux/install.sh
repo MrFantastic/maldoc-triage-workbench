@@ -12,8 +12,8 @@ echo "============================================================"
 if ! command -v "$PY" >/dev/null 2>&1; then
   echo "python3 was not found."; exit 1
 fi
-if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)'; then
-  echo "Python 3.9 or newer is needed for the GUI (found $("$PY" --version 2>&1))."
+if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'; then
+  echo "Python 3.10 or newer is needed for the GUI (found $("$PY" --version 2>&1))."
   echo "Install a newer Python (e.g. sudo apt install python3.10 python3.10-venv) and run:"
   echo "  PYTHON=python3.10 ./install.sh"
   exit 1
