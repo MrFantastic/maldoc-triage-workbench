@@ -241,6 +241,11 @@ def pip_install(*args: str) -> int:
 
 def main() -> int:
     """Fetch (or copy) the tools into vendor/, optionally install packages, and record their hashes."""
+    for stream in (sys.stdout, sys.stderr):     # a Windows console may not be UTF-8: never crash printing
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--copy-from", metavar="DIR", help="copy the files from DIR instead of downloading")
     ap.add_argument("--pip", action="store_true", help="also pip install -r requirements.txt")

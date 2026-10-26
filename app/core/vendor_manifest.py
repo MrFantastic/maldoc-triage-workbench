@@ -64,7 +64,7 @@ def record(vendor_dir: str, source: str, ref: str = "", pinned: bool = False) ->
     changes = []
     for rel, digest in files.items():
         if rel in old and old[rel] != digest:
-            changes.append(f"{rel}: hash changed ({old[rel][:12]}… → {digest[:12]}…)")
+            changes.append(f"{rel}: hash changed ({old[rel][:12]}... -> {digest[:12]}...)")
         elif rel not in old and old:
             changes.append(f"{rel}: new file")
     for rel in old:

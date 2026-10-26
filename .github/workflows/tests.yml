@@ -24,8 +24,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
         include:
+          # Python 3.9 (end of life since October 2025) has no build for Ubuntu 26.04,
+          # which ubuntu-latest became in October 2026; keep testing it on 24.04.
+          - os: ubuntu-24.04
+            python-version: "3.9"
           # The app is mainly used on Windows; test the oldest and newest supported there.
           - os: windows-latest
             python-version: "3.9"
