@@ -278,15 +278,23 @@ def tool_env() -> dict[str, str]:
 
 
 def run_cmd(cmd: list[str], display: str, timeout: int = DEFAULT_TIMEOUT, cwd: str | None = None,
-            input_bytes: bytes | None = None, max_output: int | None = None) -> RunResult:
-    """Run a command with a time limit and an output cap; Stop or opening another file kills it."""
+            input_bytes: bytes | None = None, max_output: int | None = None,
+            limits: dict | None = None) -> RunResult:
+    """Run a command with a time limit and an output cap; Stop or opening another file kills it.
+
+    limits overrides the per-tool resource limits ({"mem", "cpu", "fsize"}; tests use small ones):
+    memory 3 GB, CPU time 2 x timeout + 30 s, files written at most 1 GB, no core dumps.
+    Linux/macOS apply them in the launcher; Windows applies memory and CPU time in the Job Object."""
     env = tool_env()
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)  # no console flashes on Windows
     windows = os.name == "nt"
     if windows:
         from . import winjob
         flags |= winjob.CREATE_SUSPENDED   # resumed only once it's inside its Job Object
-    launch = cmd if windows else self_command("--contain", "--", *cmd)
+    lim = {"mem": 3 * 1024 ** 3, "cpu": 2 * int(timeout) + 30, "fsize": 1024 ** 3}
+    lim.update(limits or {})
+    launch = cmd if windows else self_command("--contain", "--mem", str(lim["mem"]), "--cpu", str(lim["cpu"]),
+                                              "--fsize", str(lim["fsize"]), "--", *cmd)
     limit = max_output or MAX_OUTPUT
     try:
         proc = subprocess.Popen(launch, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -297,7 +305,7 @@ def run_cmd(cmd: list[str], display: str, timeout: int = DEFAULT_TIMEOUT, cwd: s
     job = 0
     if windows:
         try:
-            job = winjob.contain(int(proc._handle))
+            job = winjob.contain(int(proc._handle), lim["mem"], lim["cpu"])
         except OSError as exc:            # fail closed: the process was killed before it ran
             proc.wait()
             for pipe in (proc.stdin, proc.stdout, proc.stderr):

@@ -34,6 +34,17 @@ All notable changes to Maldoc Triage Workbench. Versions follow
 - Windows now has a memory cap too: 3 GB per tool process (Job Object), plus at most
   32 processes per tool and no crash-reporting dialogs. If a tool can't be put in its
   job it isn't run (fail closed).
+- **Resource limits on Linux/macOS.** The launcher also caps each tool at 3 GB of
+  memory, CPU time of twice its timeout plus 30 s, and 1 GB per written file, and
+  turns off core dumps. A tool that hits a limit is stopped and reported as failed.
+- **ZIP packages are checked before they are opened.** `.docx`/`.xlsx`/`.pptx`
+  and other ZIP files go through a structure check (`app/core/zipcheck.py`) before
+  Python's `zipfile` reads them: the end-of-archive record must be consistent, ZIP64
+  records must be present when used, multi-disk archives are refused, and the central
+  directory may hold at most 20,000 entries and 32 MB. A package that fails is never
+  parsed: it is identified by its signature only, gets a Medium "ZIP structure
+  rejected before parsing" finding, and can't be rated clean (the Parts, preview and
+  metadata views say why instead of reading it).
 
 ## 1.4.2 (2026-10-25)
 

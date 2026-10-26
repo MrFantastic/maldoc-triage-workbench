@@ -11,6 +11,7 @@ import re
 import zipfile
 from dataclasses import dataclass, field
 
+from . import zipcheck
 from .models import Family, Finding, Severity
 
 OLE_MAGIC = bytes.fromhex("D0CF11E0A1B11AE1")
@@ -80,12 +81,19 @@ def _identify_ole(data: bytes) -> tuple[str, bool]:
     return ("OLE2 compound file (unrecognised application)", False)
 
 
-def _identify_zip(data: bytes) -> tuple[Family, str, bool]:
+def _identify_zip(data: bytes) -> tuple[Family, str, bool, str]:
+    """(family, subtype, has VBA project, reason the structure was rejected or "")."""
+    check = zipcheck.check(data)
+    if not check:      # never handed to zipfile: identify from signatures only
+        has_vba = b"vbaProject.bin" in data
+        if b"[Content_Types].xml" in data:
+            return (Family.OOXML, "OOXML package (structure rejected, not parsed)", has_vba, check.reason)
+        return (Family.ZIP, "Zip archive (structure rejected, not parsed)", False, check.reason)
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             names = zf.namelist()
     except Exception as exc:
-        return (Family.ZIP, f"Zip archive (could not list: {exc})", False)
+        return (Family.ZIP, f"Zip archive (could not list: {exc})", False, "")
     lower = [n.lower() for n in names]
     has_vba = any(n.endswith("vbaproject.bin") for n in lower)
     if "[content_types].xml" in lower:
@@ -99,8 +107,8 @@ def _identify_zip(data: bytes) -> tuple[Family, str, bool]:
             sub = "OOXML package (unrecognised application)"
         if has_vba:
             sub += ", macro-enabled (vbaProject.bin)"
-        return (Family.OOXML, sub, has_vba)
-    return (Family.ZIP, "Zip archive (no [Content_Types].xml)", False)
+        return (Family.OOXML, sub, has_vba, "")
+    return (Family.ZIP, "Zip archive (no [Content_Types].xml)", False, "")
 
 
 def identify(data: bytes, filename: str = "", deep: bool = True) -> RouteInfo:
@@ -121,14 +129,22 @@ def identify(data: bytes, filename: str = "", deep: bool = True) -> RouteInfo:
                 "EncryptedPackage stream found. Content must be decrypted before macro "
                 "analysis. Use Macros → Decrypt.", ref={"kb": "router:encrypted_office"}))
     elif data.startswith(ZIP_MAGIC):
+        rejected = ""
         if deep:
-            fam, sub, has_vba = _identify_zip(data)
+            fam, sub, has_vba, rejected = _identify_zip(data)
         elif b"[Content_Types].xml" in data:
             has_vba = b"vbaProject.bin" in data
             fam, sub = Family.OOXML, "OOXML package (signature match)" + (", macro-enabled" if has_vba else "")
         else:
             fam, sub, has_vba = Family.ZIP, "Zip archive", False
         info = RouteInfo(fam, sub, header_offset=0, has_vba_project=has_vba)
+        if rejected:
+            info.warnings.append(Finding(
+                "router", Severity.MEDIUM, "ZIP structure rejected before parsing",
+                f"{rejected}. The archive was not handed to the zip parser, so the tools that read the "
+                "package (Parts, Metadata) don't run on it and the result is incomplete; it can't be rated "
+                "clean. Malformed or oversized zip directories are used to break or evade parsers.",
+                ref={"kb": "router:zip_rejected"}))
     elif head.startswith(b"{\\rt"):
         info = RouteInfo(Family.RTF, "Rich Text Format", header_offset=0)
     elif pdf_pos != -1:

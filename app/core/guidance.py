@@ -429,6 +429,15 @@ GUIDES: dict[str, Guide] = {
     "router:encrypted_office": Guide("Password-protected Office file", "The document is encrypted.",
                                      "Hides macros from scanners.", "",
                                      [S("Decrypt it", "macros.decrypt")]),
+    "router:zip_rejected": Guide(
+        "ZIP structure rejected",
+        "The archive's directory is malformed, inconsistent, or larger than the inspection limits "
+        "(20,000 entries, 32 MB of directory), so it was never parsed.",
+        "Crafted zip directories are used to crash, hang or exhaust parsers, or to show scanners "
+        "something different from what Office opens.",
+        "Damaged downloads or truncated attachments.",
+        [S("Look at the end of the file, where the zip directory lives", "hex:end"),
+         S("Get a clean copy from the sender or the original mail before deciding", "")]),
     "router:late_pdf": Guide("Embedded PDF marker", "A %PDF marker exists deep inside the file.", "", "",
                              [S("Look at it in hex", "hex:{offset}")]),
 }

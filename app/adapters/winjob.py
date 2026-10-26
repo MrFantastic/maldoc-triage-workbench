@@ -25,6 +25,7 @@ MEMORY_LIMIT = 3 * 1024 ** 3
 ACTIVE_PROCESS_LIMIT = 32
 CREATE_SUSPENDED = 0x00000004
 
+_JOB_OBJECT_LIMIT_PROCESS_TIME = 0x00000002
 _JOB_OBJECT_LIMIT_ACTIVE_PROCESS = 0x00000008
 _JOB_OBJECT_LIMIT_PROCESS_MEMORY = 0x00000100
 _JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION = 0x00000400
@@ -94,8 +95,10 @@ def _fail(what: str) -> ContainmentError:
     return ContainmentError(err, f"{what} failed (Windows error {err})")
 
 
-def create_job(memory_limit: int = MEMORY_LIMIT, process_limit: int = ACTIVE_PROCESS_LIMIT) -> int:
-    """A new Job Object with the limits above. Returns its handle."""
+def create_job(memory_limit: int = MEMORY_LIMIT, process_limit: int = ACTIVE_PROCESS_LIMIT,
+               cpu_seconds: int = 0) -> int:
+    """A new Job Object with the limits above (and a per-process CPU-time limit if cpu_seconds).
+    Returns its handle."""
     k32, _nt = _load()
     job = k32.CreateJobObjectW(None, None)
     if not job:
@@ -106,6 +109,9 @@ def create_job(memory_limit: int = MEMORY_LIMIT, process_limit: int = ACTIVE_PRO
         | _JOB_OBJECT_LIMIT_ACTIVE_PROCESS | _JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION)
     info.BasicLimitInformation.ActiveProcessLimit = process_limit
     info.ProcessMemoryLimit = memory_limit
+    if cpu_seconds:
+        info.BasicLimitInformation.LimitFlags |= _JOB_OBJECT_LIMIT_PROCESS_TIME
+        info.BasicLimitInformation.PerProcessUserTimeLimit = int(cpu_seconds) * 10_000_000  # 100 ns units
     if not k32.SetInformationJobObject(job, _JobObjectExtendedLimitInformation,
                                        ctypes.byref(info), ctypes.sizeof(info)):
         exc = _fail("SetInformationJobObject")
@@ -114,13 +120,13 @@ def create_job(memory_limit: int = MEMORY_LIMIT, process_limit: int = ACTIVE_PRO
     return job
 
 
-def contain(process_handle: int) -> int:
+def contain(process_handle: int, memory_limit: int = MEMORY_LIMIT, cpu_seconds: int = 0) -> int:
     """Put a process created with CREATE_SUSPENDED into a new job, then resume it.
     Returns the job handle. On any failure the process is terminated and ContainmentError raised."""
     k32, nt = _load()
     job = None
     try:
-        job = create_job()
+        job = create_job(memory_limit, ACTIVE_PROCESS_LIMIT, cpu_seconds)
         if not k32.AssignProcessToJobObject(job, process_handle):
             raise _fail("AssignProcessToJobObject")
         status = nt.NtResumeProcess(process_handle)

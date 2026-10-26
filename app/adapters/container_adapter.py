@@ -12,7 +12,7 @@ import re
 import zipfile
 from dataclasses import dataclass, field
 
-from ..core import safexml
+from ..core import safexml, zipcheck
 from ..core.models import Finding, Severity, ToolResult
 from ..core.safety import defang, safe_output_path
 from . import scripts
@@ -63,6 +63,18 @@ class PartsData:
         return [r for r in self.relationships if r.external]
 
 
+class ZipRejected(ValueError):
+    """The archive failed the bounded structure check, so zipfile never parsed it."""
+
+
+def open_checked(path: str) -> zipfile.ZipFile:
+    """zipfile.ZipFile(path), but only after core.zipcheck accepts the archive's structure."""
+    result = zipcheck.check(path)
+    if not result:
+        raise ZipRejected(f"ZIP structure rejected before parsing: {result.reason}")
+    return zipfile.ZipFile(path)
+
+
 def _part_note(name: str, data: bytes) -> str:
     low = name.lower()
     if data[:2] == b"MZ":
@@ -86,7 +98,9 @@ def read_parts(path: str) -> ToolResult:
     """Read the parts and relationships of the package at path, within the decompression budget."""
     data = PartsData()
     try:
-        zf = zipfile.ZipFile(path)
+        zf = open_checked(path)
+    except ZipRejected as exc:
+        return ToolResult("parts", False, error=str(exc), data=data)
     except Exception as exc:
         return ToolResult("parts", False, error=f"Not a readable zip: {exc}", data=data)
     budget = TOTAL_READ_BUDGET
@@ -182,7 +196,7 @@ def findings_from(d: PartsData) -> list[Finding]:
 
 def read_part(path: str, name: str) -> bytes:
     """Bytes of one part; parts larger than MAX_PART_READ are refused."""
-    with zipfile.ZipFile(path) as zf:
+    with open_checked(path) as zf:
         info = zf.getinfo(name)
         if info.file_size > MAX_PART_READ:
             raise ValueError(f"Part is larger than {MAX_PART_READ:,} bytes")
@@ -191,7 +205,7 @@ def read_part(path: str, name: str) -> bytes:
 
 def preview_part(path: str, name: str, max_bytes: int = PREVIEW_BYTES) -> tuple[bytes, int]:
     """First max_bytes of a part, plus its full size (for display)."""
-    with zipfile.ZipFile(path) as zf:
+    with open_checked(path) as zf:
         info = zf.getinfo(name)
         with zf.open(info) as fh:
             return fh.read(max_bytes), info.file_size
@@ -279,7 +293,7 @@ def read_metadata(path: str, family: str) -> ToolResult:
         cmd = f"olemeta {scripts.quote(path)}  &&  oletimes {scripts.quote(path)}"
     elif family == "OOXML":
         try:
-            with zipfile.ZipFile(path) as zf:
+            with open_checked(path) as zf:
                 for part, group in (("docProps/core.xml", "Core"), ("docProps/app.xml", "App"),
                                     ("docProps/custom.xml", "Custom")):
                     try:

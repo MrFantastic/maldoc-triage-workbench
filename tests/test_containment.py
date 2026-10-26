@@ -178,5 +178,38 @@ class ContainmentTests(unittest.TestCase):
         self.assertNotIn(b"ran", r.stdout)
 
 
+
+class ResourceLimitTests(unittest.TestCase):
+    """The per-tool limits really apply (small values, so the tests are fast)."""
+
+    def run_py(self, code, limits, timeout=60):
+        start = time.monotonic()
+        r = scripts.run_cmd([sys.executable, "-c", code], "limits", timeout, limits=limits)
+        return r, time.monotonic() - start
+
+    def test_cpu_time_limit_stops_a_busy_loop(self):
+        r, took = self.run_py("while True: pass", {"cpu": 2})
+        self.assertFalse(r.timed_out)                 # stopped by the CPU limit, not the 60 s timeout
+        self.assertNotEqual(r.returncode, 0)
+        self.assertLess(took, 30)
+
+    def test_memory_limit(self):
+        code = ("try:\n    b = bytearray(1536 * 1024 * 1024)\n    print('allocated')\n"
+                "except MemoryError:\n    print('MemoryError')")
+        r, _ = self.run_py(code, {"mem": 1024 * 1024 * 1024})
+        self.assertNotIn(b"allocated", r.stdout)
+
+    @unittest.skipIf(os.name == "nt", "RLIMIT_FSIZE and RLIMIT_CORE are POSIX")
+    def test_file_size_limit_and_no_core_dumps(self):
+        with tempfile.TemporaryDirectory() as d:
+            target = os.path.join(d, "big.bin")
+            code = (f"import resource\nprint('core', resource.getrlimit(resource.RLIMIT_CORE))\n"
+                    f"open({target!r}, 'wb').write(b'x' * (2 * 1024 * 1024))")
+            r, _ = self.run_py(code, {"fsize": 1024 * 1024})
+        self.assertIn(b"core (0, 0)", r.stdout)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("File too large", r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
