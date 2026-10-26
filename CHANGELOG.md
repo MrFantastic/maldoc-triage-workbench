@@ -3,7 +3,7 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.5.0 (2026-10-26)
 
 ### Security
 - **Pinned, verified tool downloads.** `setup_vendor.py` (and Help → Download / update
