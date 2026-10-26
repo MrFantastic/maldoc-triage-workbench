@@ -1,6 +1,8 @@
 """GUI-side calls that parse a hostile file. Each runs in a separate worker
 process (run.py --worker) with a timeout, an output cap and a kill switch, so
-a parser hang, crash or memory blow-up can't take the app down.
+a parser hang, crash or memory blow-up can't take the app down. In the REMnux
+edition, tasks that need oletools, msoffcrypto or jsbeautifier run under REMnux's
+own environment for that library (toolenv.py).
 
 Signatures mirror the in-process adapter functions they replace.
 """
@@ -9,7 +11,7 @@ from __future__ import annotations
 import json
 
 from ..core import codec
-from . import scripts
+from . import scripts, toolenv
 from .macro_adapter import WrongPassword
 from .pdf_crypto import PdfPasswordRequired
 
@@ -33,7 +35,7 @@ def call(task: str, *args, timeout: int | None = None, **kwargs):
     from ..worker import RESULT_MARKER
     request = codec.dumps({"task": task, "args": list(args), "kwargs": kwargs}).encode("utf-8")
     limit = timeout or TIMEOUTS.get(task, 120)
-    r = scripts.run_cmd(scripts.self_command("--worker"), f"worker {task}", limit,
+    r = scripts.run_cmd(toolenv.worker_command(task), f"worker {task}", limit,
                         input_bytes=request, max_output=MAX_REPLY)
     if r.stopped:
         raise WorkerError(f"{task}: stopped by user")

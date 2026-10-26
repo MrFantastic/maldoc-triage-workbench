@@ -211,6 +211,55 @@ def python_exe() -> str | None:
     return None
 
 
+_PYTHON_NAME = re.compile(r"python(3(\.\d+)?)?", re.I)
+
+
+def shebang_python(path: str | None) -> str | None:
+    """The Python interpreter named on a script's #! line, if it is an absolute path
+    to an existing python / python3 / python3.N; else None (and always None on Windows).
+
+    REMnux installs each tool in its own environment and points the #! line of the
+    tool (or of its launcher) at that environment's interpreter, e.g.
+    #!/opt/didier-stevens/bin/python3. A '#!/usr/bin/env python3' line returns None."""
+    if not path or os.name == "nt":
+        return None
+    try:
+        with open(path, "rb") as fh:
+            first = fh.readline(512).decode("utf-8", "replace").strip()
+    except OSError:
+        return None
+    if not first.startswith("#!"):
+        return None
+    parts = first[2:].split()
+    interp = parts[0] if parts else ""
+    if (os.path.isabs(interp) and _PYTHON_NAME.fullmatch(os.path.basename(interp))
+            and os.path.isfile(interp) and os.access(interp, os.X_OK)):
+        return interp
+    return None
+
+
+def _in_vendor(path: str) -> bool:
+    try:
+        vendor = os.path.realpath(VENDOR_DIR)
+        return os.path.commonpath([os.path.realpath(path), vendor]) == vendor
+    except ValueError:          # different drives (Windows)
+        return False
+
+
+def script_python(script_path: str) -> str | None:
+    """The interpreter a .py tool runs with (None: re-launch this app with --run-script).
+
+    Our own vendored copies run with this app's Python. An installed copy (e.g. REMnux's
+    Didier Stevens tools) runs with the interpreter its #! line names, so it gets the
+    libraries its environment provides (REMnux's /opt/didier-stevens has yara-python,
+    pyzipper, pefile, ...); without one, it runs with this app's Python."""
+    if not _in_vendor(script_path):
+        own = shebang_python(script_path)
+        if own:
+            return own
+    return python_exe()
+
+
 def self_command(mode: str, *args: str) -> list[str]:
     """Command that re-launches this app in a helper mode (works frozen or not)."""
     if getattr(sys, "frozen", False):
@@ -233,7 +282,7 @@ def run_script(script_path: str, args: list[str], timeout: int = DEFAULT_TIMEOUT
     display = (display_name or os.path.basename(script_path)) + " " + " ".join(_quote(a) for a in args)
     is_py = script_path.lower().endswith(".py")
     if is_py:
-        py = python_exe()
+        py = script_python(script_path)
         cmd = [py, script_path] + args if py else self_command("--run-script", script_path, *args)
     else:
         cmd = [script_path] + args

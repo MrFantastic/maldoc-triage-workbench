@@ -47,6 +47,22 @@ All notable changes to Maldoc Triage Workbench. Versions follow
   metadata views say why instead of reading it).
 
 ### Changed
+- **REMnux edition: REMnux's own copy of every tool and library.** REMnux installs each
+  Python tool in its own environment under `/opt`, which other Pythons can't import
+  from, so the app used to install second copies of oletools, msoffcrypto-tool and
+  olefile for itself and run Didier Stevens' scripts with its own Python. Now:
+  - Didier Stevens' scripts run with the Python their `#!` line names
+    (`/opt/didier-stevens/bin/python3`), so they have the libraries REMnux gave them.
+  - The parsing steps that use oletools (oleid, mraptor, olevba), msoffcrypto-tool and
+    jsbeautifier run in a worker under REMnux's environment for that library
+    (`/opt/oletools`, `/opt/msoffcrypto-tool`, `/opt/peepdf-3`). JavaScript is now
+    formatted by REMnux's jsbeautifier instead of the basic fallback.
+  - `install.sh` no longer installs those libraries when REMnux's copies work; it
+    installs only what REMnux lacks (PySide6, pikepdf, defusedxml). If REMnux's copy is
+    missing or broken, the app's own copy is installed and used, and Help → Tool status
+    says why.
+  - Tool status shows which copy of each library is used and which Python runs each
+    script. The standard edition is unchanged.
 - **Python 3.10 or newer is now required** (3.12+ still recommended). Python 3.9 reached
   end of life in October 2025, gets no security fixes, and current CI runners no longer
   provide it. REMnux (Python 3.12) and every supported Windows Python are unaffected;

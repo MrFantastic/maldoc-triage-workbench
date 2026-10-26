@@ -116,6 +116,10 @@ def _selftest_echo(value):
     return value
 
 
+def _selftest_python():
+    return sys.executable
+
+
 TASKS = {
     "identify": _identify,
     "pdfid.run": _pdfid_run,
@@ -132,6 +136,7 @@ TASKS = {
     "pdf.decrypt": _pdf_decrypt,
     "selftest.sleep": _selftest_sleep,
     "selftest.echo": _selftest_echo,
+    "selftest.python": _selftest_python,
 }
 
 
@@ -144,8 +149,12 @@ def _reply(payload: dict) -> None:
 
 
 def worker_main() -> int:
-    """run.py --worker: read a request from stdin, run the allowlisted task, print the reply."""
+    """run.py --worker: read a request from stdin, run the allowlisted task, print the reply.
+
+    In the REMnux edition some tasks run under a REMnux tool environment's interpreter
+    instead of the app's (adapters/toolenv.py); this code must work under both."""
     _limit_memory()
+    os.environ["MTW_IN_WORKER"] = "1"     # a worker never looks for other environments itself
     if sys.stdin is not None:
         raw = sys.stdin.buffer.read()
     else:                       # pythonw: no sys.stdin object, but fd 0 is our pipe

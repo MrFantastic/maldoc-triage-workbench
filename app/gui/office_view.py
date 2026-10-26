@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QGroupBox, QHBoxLayout
                                QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from .. import edition
-from ..adapters import isolated
+from ..adapters import isolated, toolenv
 from ..adapters import office_adapter as oa
 from ..core.models import Severity, ToolResult
 from ..core.safety import defang
@@ -62,7 +62,8 @@ class OfficeTriageView(QWidget):
         self.data: oa.OfficeTriageData | None = None
 
         # ---- header: verdict card ---------------------------------------
-        ver = oa.oletools_version()
+        ole = toolenv.provider("oletools")
+        ver = ole.version if ole.available else None
         self.version_lbl = QLabel(f"oletools {ver}" if ver else
                                   f"<b>oletools is not installed</b> ({html.escape(edition.hint('oletools'))}).")
         self.version_lbl.setObjectName("Muted")

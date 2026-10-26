@@ -137,6 +137,8 @@ There are two packages, built from the same code:
   oletools, peepdf and the rest. Instructions below.
 - **REMnux edition** (`…-remnux.zip`), for a REMnux VM: it uses the tools REMnux already
   has (PATH, `/usr/local/bin`), never downloads any, and ignores any `vendor/` folder.
+  Python tools and libraries (Didier Stevens' scripts, oletools, msoffcrypto) run in
+  REMnux's own environments for them, with REMnux's copies.
   Its own README explains the two commands it needs (`./install.sh`, `./start.sh`).
 
 Help → Tool status shows which edition is running and where each tool was found.

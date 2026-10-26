@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # One-time setup for Maldoc Triage Workbench (REMnux edition).
 # Uses the analysis tools REMnux already installs; downloads none. It only sets
-# up a private Python environment (.venv) for the GUI, reusing REMnux's Python
-# libraries (oletools, msoffcrypto, ...) when they're importable.
+# up a private Python environment (.venv) for the GUI. Python libraries REMnux
+# provides are used from REMnux: oletools, msoffcrypto-tool and jsbeautifier from
+# their own REMnux environments (/opt/...), which the app runs those tasks under;
+# anything else REMnux's Python can import is shared into the .venv. Only what
+# REMnux lacks is installed, at the versions in constraints.txt.
 set -u
 cd "${MTW_APP_DIR:-$(dirname "$0")}"   # MTW_APP_DIR: set when run from a git clone's install.sh
 PY="${PYTHON:-python3}"
@@ -30,19 +33,60 @@ fi
 VPY=.venv/bin/python
 PIPC=""; [ -f constraints.txt ] && PIPC="-c constraints.txt"   # the exact versions CI tests
 
-echo "[2/3] Installing what REMnux doesn't already provide..."
+# The interpreter of REMnux's environment for a library: the Python named on the #! line of
+# one of its launchers (or REMnux's usual path), if it imports the modules and is 3.10+.
+# Same rules as the app (app/adapters/toolenv.py), which looks again every time it starts.
+remnux_python() {   # remnux_python "<modules,comma,separated>" <launcher-or-interpreter>...
+  mods="$1"; shift
+  for c in "$@"; do
+    case "$c" in
+      /*/python3) i="$c" ;;
+      *) p="$(command -v "$c" 2>/dev/null)"; [ -z "$p" ] && [ -e "/usr/local/bin/$c" ] && p="/usr/local/bin/$c"
+         [ -n "$p" ] || continue
+         i="$(head -n1 "$(readlink -f "$p")" 2>/dev/null | sed -n 's/^#![[:space:]]*\([^[:space:]]*\).*/\1/p')" ;;
+    esac
+    case "$(basename "$i" 2>/dev/null)" in python|python3|python3.*) ;; *) continue ;; esac
+    if [ -x "$i" ] && "$i" -I -c "import sys, $mods; sys.exit(0 if sys.version_info >= (3, 10) else 1)" 2>/dev/null; then
+      echo "$i"; return 0
+    fi
+  done
+  return 1
+}
+
+echo "[2/3] Using REMnux's Python libraries; installing only what REMnux lacks..."
 "$VPY" -c 'import PySide6' 2>/dev/null && echo "  GUI (PySide6): already available" || \
   "$VPY" -m pip install --quiet "PySide6>=6.6" $PIPC || { echo "Could not install PySide6 (internet needed once)."; exit 1; }
-# module:pip requirement:what needs it (oletools is required: Office triage and macro analysis use it)
-for item in "oletools:oletools>=0.60.2:REQUIRED for Office triage and macro analysis" \
-            "msoffcrypto:msoffcrypto-tool>=5.4:Office decryption" \
+# library|modules REMnux's copy must import|launchers or interpreters to try|pip fallback|what needs it
+for item in "oletools|oletools.olevba,oletools.oleid,oletools.mraptor|olevba mraptor /opt/oletools/bin/python3|oletools>=0.60.2|REQUIRED for Office triage and macro analysis" \
+            "msoffcrypto-tool|msoffcrypto|msoffcrypto-tool olevba /opt/msoffcrypto-tool/bin/python3 /opt/oletools/bin/python3|msoffcrypto-tool>=5.4|Office decryption" \
+            "jsbeautifier|jsbeautifier|peepdf /opt/peepdf-3/bin/python3||nicer JavaScript formatting (optional)"; do
+  IFS='|' read -r name mods cands req what <<ITEM
+$item
+ITEM
+  # shellcheck disable=SC2086
+  if i="$(remnux_python "$mods" $cands)"; then
+    echo "  $name: using REMnux's copy ($(dirname "$(dirname "$i")"))"
+  elif [ -z "$req" ]; then
+    echo "  $name: not found on this VM: $what unavailable"
+  elif "$VPY" -m pip install --quiet "$req" $PIPC; then
+    echo "  $name: REMnux's copy not found or not working; installed a copy for the app"
+  else
+    echo "  $name: could not be installed (internet needed once): $what will be unavailable"
+  fi
+done
+# Used by the app's own Python (file-type detection, OLE metadata, PDF decryption, XML parsing).
+# module:pip requirement:what needs it
+for item in "olefile:olefile>=0.46:file-type detection and OLE metadata" \
             "pikepdf:pikepdf>=8:Decrypt PDF" \
             "defusedxml:defusedxml>=0.7:hardened XML parsing"; do
   mod="${item%%:*}"; rest="${item#*:}"; req="${rest%%:*}"; what="${rest#*:}"
-  if "$VPY" -c "import $mod" 2>/dev/null; then
+  where="$("$VPY" -c "import sys, $mod; print('app' if $mod.__file__.startswith(sys.prefix) else 'remnux')" 2>/dev/null)"
+  if [ "$where" = remnux ]; then
     echo "  $mod: using REMnux's copy"
+  elif [ "$where" = app ]; then
+    echo "  $mod: already installed for the app"
   elif "$VPY" -m pip install --quiet "$req" $PIPC; then
-    echo "  $mod: installed"
+    echo "  $mod: installed (REMnux doesn't provide it)"
   else
     echo "  $mod: could not be installed (internet needed once): $what will be unavailable"
   fi

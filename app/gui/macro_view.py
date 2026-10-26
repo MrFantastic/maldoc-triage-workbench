@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QHBoxLayout, Q
                                QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget)
 
 from .. import edition
-from ..adapters import isolated
+from ..adapters import isolated, toolenv
 from ..adapters import macro_adapter as ma
 from ..core.models import Severity, ToolResult
 from ..core.safety import defang, safe_output_path
@@ -201,7 +201,7 @@ class MacroView(QWidget):
 
     def _set_encrypted(self, encrypted: bool) -> None:
         self.encrypted = encrypted
-        self.decrypt_btn.setEnabled(encrypted and ma.msoffcrypto_available())
+        self.decrypt_btn.setEnabled(encrypted and toolenv.provider("msoffcrypto").available)
         if encrypted:
             self.banner.setText(
                 f"<b style='color:{SEVERITY_COLOR[Severity.MEDIUM]}'>This document is encrypted.</b> "

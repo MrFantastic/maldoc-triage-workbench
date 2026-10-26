@@ -18,10 +18,9 @@ cd maldoc-triage-workbench
 ./start.sh          # or: ./start.sh suspicious.pdf
 ```
 
-`install.sh` only installs what REMnux lacks, usually just the GUI library
-(PySide6), so it needs internet access once. It reuses REMnux's own oletools,
-msoffcrypto and pikepdf when they're importable, then lists which REMnux tools
-it found. REMnux's default Wayland desktop needs nothing more. Under an X11 session, if the window
+`install.sh` only installs what REMnux lacks (the GUI library PySide6, plus pikepdf
+and defusedxml), so it needs internet access once, then lists which REMnux tools it
+found. REMnux's default Wayland desktop needs nothing more. Under an X11 session, if the window
 doesn't open, install Qt's missing library: `sudo apt install libxcb-cursor0`.
 
 Python 3.10 or newer is required (3.12+ recommended). If REMnux's `python3` is
@@ -32,6 +31,21 @@ older, install a newer one and run `PYTHON=python3.10 ./install.sh`.
 The app looks for each tool in this order: an `MTW_*` environment variable (for
 example `MTW_PDFID=/path/to/pdfid.py`), then PATH, then `/usr/local/bin`,
 `/usr/bin` and `/opt/remnux-didier`. Any `vendor` folder is ignored in this edition.
+
+Every tool and library is REMnux's own copy where REMnux has one. REMnux installs
+each tool in its own Python environment under `/opt`, so the app runs each with the
+interpreter REMnux gave it:
+
+- Didier Stevens' scripts run with the Python on their `#!` line
+  (`/opt/didier-stevens/bin/python3`), which has the libraries they use.
+- oletools (olevba, oleid, mraptor) runs under `/opt/oletools`, msoffcrypto under
+  `/opt/msoffcrypto-tool` and jsbeautifier under `/opt/peepdf-3`: the app runs its
+  parsing step for those with that environment's interpreter.
+- olevba, msodde, oleobj, rtfobj, peepdf and xlmdeobfuscator run as REMnux's commands.
+
+If REMnux's copy of a library is missing or broken, `install.sh` installs one for the
+app and the app uses that. Help → Tool status shows which copy and which Python each
+tool uses.
 
 ## Safety
 

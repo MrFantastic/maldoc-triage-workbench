@@ -6,7 +6,6 @@ metadata. Results are cached; call clear() after tools are re-downloaded.
 """
 from __future__ import annotations
 
-import os
 import re
 import subprocess
 import sys
@@ -59,17 +58,8 @@ def launcher_dist_version(script: str | None, *names: str) -> str:
     environments (/opt/<tool>/bin/python3) with a launcher on PATH, so their
     metadata isn't visible to this Python. Ask the launcher's interpreter instead
     (only the interpreter named on the launcher's #! line is run, never the tool)."""
-    if not script or os.name == "nt":
-        return ""
-    try:
-        with open(script, "rb") as fh:
-            first = fh.readline(512).decode("utf-8", "replace").strip()
-    except OSError:
-        return ""
-    if not first.startswith("#!"):
-        return ""
-    interp = first[2:].strip().split()[0] if first[2:].strip() else ""
-    if not os.path.isabs(interp) or not os.path.isfile(interp) or "python" not in os.path.basename(interp):
+    interp = scripts.shebang_python(script)
+    if not interp:
         return ""
     code = ("import importlib.metadata as m, sys\n"
             "for n in sys.argv[1:]:\n"
@@ -102,8 +92,13 @@ def _peepdf_version() -> str:
     return ""
 
 
+def _library_version(key: str) -> str:
+    from . import toolenv
+    p = toolenv.provider(key)
+    return p.version if p.available else ""
+
+
 def _detect() -> dict[str, str]:
-    from .office_adapter import oletools_version
     from .pdfid_adapter import locate_pdfid
     out = {
         "pdfid": script_version(locate_pdfid()),
@@ -111,11 +106,12 @@ def _detect() -> dict[str, str]:
         "oledump": script_version(scripts.locate("oledump.py")),
         "zipdump": script_version(scripts.locate("zipdump.py")),
         "rtfdump": script_version(scripts.locate("rtfdump.py")),
-        "oletools": oletools_version() or "",
+        "oletools": _library_version("oletools"),
         "peepdf": _peepdf_version(),
         "XLMMacroDeobfuscator": dist_version("XLMMacroDeobfuscator") or launcher_dist_version(
             scripts.locate_cli("xlmdeobfuscator"), "XLMMacroDeobfuscator"),
-        "msoffcrypto-tool": dist_version("msoffcrypto-tool"),
+        "msoffcrypto-tool": _library_version("msoffcrypto"),
+        "jsbeautifier": _library_version("jsbeautifier"),
         "pikepdf": dist_version("pikepdf"),
         "pypdf": dist_version("pypdf"),
         "Python": sys.version.split()[0],
@@ -138,5 +134,7 @@ def version_of(tool: str) -> str:
 
 def clear() -> None:
     """Forget the cached versions, so they're detected again."""
+    from . import toolenv
     with _lock:
         _cache.clear()
+    toolenv.clear()
