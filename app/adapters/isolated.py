@@ -2,7 +2,7 @@
 process (run.py --worker) with a timeout, an output cap and a kill switch, so
 a parser hang, crash or memory blow-up can't take the app down. In the REMnux
 edition, tasks that need oletools, msoffcrypto or jsbeautifier run under REMnux's
-own environment for that library (toolenv.py).
+own environment for that library (toolenv.py); YARA under REMnux's Python that has it.
 
 Signatures mirror the in-process adapter functions they replace.
 """
@@ -24,7 +24,7 @@ TIMEOUTS = {
     "identify": 60, "pdfid.run": 120, "pdfid.disarm": 120, "office.run": 240,
     "macro.analyse": 300, "macro.is_encrypted": 60, "macro.decrypt": 120,
     "parts.read": 180, "parts.preview": 60, "parts.extract": 120, "meta.read": 60,
-    "js.beautify": 60, "pdf.decrypt": 180,
+    "js.beautify": 60, "pdf.decrypt": 180, "yara.scan": 600,
 }
 _REMOTE_ERRORS = {"WrongPassword": WrongPassword, "PdfPasswordRequired": PdfPasswordRequired}
 MAX_REPLY = 256 * 1024 * 1024
@@ -134,6 +134,11 @@ def read_metadata(path, family):
 def beautify(code: str) -> tuple[str, str]:
     """peepdf_adapter.beautify, run in a worker on at most 5 MB of code: (code, engine)."""
     return tuple(call("js.beautify", code[:5_000_000]))
+
+
+def yara_scan(path, files, zip_parts: bool):
+    """yara_adapter.scan (the whole file, and each ZIP part when zip_parts), run in a worker."""
+    return call("yara.scan", path, list(files), bool(zip_parts))
 
 
 def pdf_decrypt(path, out_dir, password="") -> tuple[str, str]:

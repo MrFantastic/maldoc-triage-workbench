@@ -112,6 +112,7 @@ def _detect() -> dict[str, str]:
             scripts.locate_cli("xlmdeobfuscator"), "XLMMacroDeobfuscator"),
         "msoffcrypto-tool": _library_version("msoffcrypto"),
         "jsbeautifier": _library_version("jsbeautifier"),
+        "yara-python": _library_version("yara"),
         "pikepdf": dist_version("pikepdf"),
         "pypdf": dist_version("pypdf"),
         "Python": sys.version.split()[0],

@@ -2,7 +2,7 @@
 # One-time setup for Maldoc Triage Workbench (REMnux edition).
 # Uses the analysis tools REMnux already installs; downloads none. It only sets
 # up a private Python environment (.venv) for the GUI. Python libraries REMnux
-# provides are used from REMnux: oletools, msoffcrypto-tool and jsbeautifier from
+# provides are used from REMnux: oletools, msoffcrypto-tool, jsbeautifier and YARA from
 # their own REMnux environments (/opt/...), which the app runs those tasks under;
 # anything else REMnux's Python can import is shared into the .venv. Only what
 # REMnux lacks is installed, at the versions in constraints.txt.
@@ -59,7 +59,8 @@ echo "[2/3] Using REMnux's Python libraries; installing only what REMnux lacks..
 # library|modules REMnux's copy must import|launchers or interpreters to try|pip fallback|what needs it
 for item in "oletools|oletools.olevba,oletools.oleid,oletools.mraptor|olevba mraptor /opt/oletools/bin/python3|oletools>=0.60.2|REQUIRED for Office triage and macro analysis" \
             "msoffcrypto-tool|msoffcrypto|msoffcrypto-tool olevba /opt/msoffcrypto-tool/bin/python3 /opt/oletools/bin/python3|msoffcrypto-tool>=5.4|Office decryption" \
-            "jsbeautifier|jsbeautifier|peepdf /opt/peepdf-3/bin/python3||nicer JavaScript formatting (optional)"; do
+            "jsbeautifier|jsbeautifier|peepdf /opt/peepdf-3/bin/python3||nicer JavaScript formatting (optional)" \
+            "yara-python|yara|oledump.py pdf-parser.py /opt/didier-stevens/bin/python3|yara-python>=4.3|YARA scanning"; do
   IFS='|' read -r name mods cands req what <<ITEM
 $item
 ITEM

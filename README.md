@@ -85,11 +85,12 @@ when a tool can't run the verdict says INCOMPLETE instead of "clean".
 
 | File type | Tabs |
 |---|---|
-| **PDF** | pdfid · pdf-parser · peepdf (+ JS workbench) · Report · Hex |
-| **OLE2** (doc/xls/ppt/msg) | Office triage · Macros · Streams · Objects & links · Metadata · Report · Hex |
-| **OOXML** (docx/docm/xlsx/xlsm/xlsb/pptx…) | Office triage · Macros · Parts · Streams · Objects & links · Metadata · Report · Hex |
-| **RTF** | Office triage · Objects & links (rtfobj, rtfdump) · Report · Hex |
-| **MHT / Word XML / SLK** | Office triage · Macros · Report · Hex |
+| **PDF** | pdfid · pdf-parser · peepdf (+ JS workbench) · YARA · Report · Hex |
+| **OLE2** (doc/xls/ppt/msg) | Office triage · Macros · Streams · Objects & links · Metadata · YARA · Report · Hex |
+| **OOXML** (docx/docm/xlsx/xlsm/xlsb/pptx…) | Office triage · Macros · Parts · Streams · Objects & links · Metadata · YARA · Report · Hex |
+| **RTF** | Office triage · Objects & links (rtfobj, rtfdump) · YARA · Report · Hex |
+| **MHT / Word XML / SLK** | Office triage · Macros · YARA · Report · Hex |
+| **Anything else** | YARA · Report · Hex |
 
 | Tab | Tools | What you get |
 |---|---|---|
@@ -103,7 +104,24 @@ when a tool can't run the verdict says INCOMPLETE instead of "clean".
 | Streams | oledump.py, olemap, oledir | Stream list with M/O flags, raw / VBA / strings / hexdump / plugin views, analyze stream as new sample |
 | Objects & links | oleobj, rtfobj, msodde, rtfdump.py | Extract embedded objects (renamed `.bin`), flag executables, DDE fields |
 | Metadata | olefile (olemeta/oletimes), docProps | Author, last saved by, timestamps, tampering hints |
+| YARA | yara-python, oledump.py, pdf-parser.py, rtfdump.py | Your own rules over the whole file, each ZIP part, each OLE stream and all VBA code, each decoded PDF stream and each RTF object; where each rule matched and the matched text |
 | Report | built-in | Notes, verdict and recommended action, phishing summary to paste into a ticket, HTML report, IOC CSV, JSON |
+
+### YARA
+
+The app doesn't ship rules: point it at your own with **File → YARA rules…** (one rules
+file, or a folder whose `.yar` / `.yara` files, in any sub-folder, are all used; other
+files are ignored). Every sample is then scanned automatically:
+
+- the whole file, and each part of a ZIP-based file (decompressed), in the app;
+- inside the format, by Didier Stevens' tools' own YARA option, which decode first: each
+  OLE stream and all VBA code together (oledump), each PDF object's decoded stream
+  (pdf-parser), each RTF object (rtfdump).
+
+Each rule that matches is a Medium finding, so the verdict is at least Suspicious. Rules
+can use oledump's external variables `streamname` and `VBA`; pdf-parser doesn't define
+them, so it reports such rules as not compiling. On REMnux nothing needs installing (its
+Python for Didier Stevens' tools has YARA); the standard edition installs yara-python.
 
 ## Guided investigation
 

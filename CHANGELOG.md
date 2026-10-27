@@ -3,6 +3,26 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- **YARA scanning with your own rules.** File → YARA rules… (or the YARA tab) takes one
+  rules file, or a folder whose `.yar` / `.yara` files are all used; the app ships no
+  rules. Every sample is then scanned automatically, in a new YARA tab:
+  - the whole file, and each part of a ZIP-based file (decompressed, within the Parts
+    view's budgets), by the app with yara-python, in its worker process;
+  - inside the format, by Didier Stevens' tools' own YARA option, which decode first:
+    each OLE stream and all VBA code together (oledump), each PDF object's decoded
+    stream (pdf-parser), each RTF object (rtfdump).
+
+  The tab lists each rule, where it matched and the matched text (defanged). Each
+  matching rule is a Medium finding, so the verdict is at least Suspicious. A pass that
+  can't run (for example pdf-parser with a rule that uses oledump's `streamname`
+  variable) is noted instead of failing the scan.
+- REMnux: nothing to install; the app uses REMnux's yara-python (the Python REMnux runs
+  Didier Stevens' tools with). Standard edition: the installers add yara-python 4.5.4
+  (optional, like PDF decryption). Help → Tool status shows the YARA copy and rules.
+
 ## 1.5.1 (2026-10-26)
 
 Fixes from an external code review of 1.5.0.

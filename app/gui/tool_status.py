@@ -5,7 +5,8 @@ from __future__ import annotations
 import sys
 
 from .. import edition
-from ..adapters import macro_adapter, pdf_crypto, pdfid_adapter, peepdf_adapter, scripts, toolenv, versions
+from ..adapters import (macro_adapter, pdf_crypto, pdfid_adapter, peepdf_adapter, scripts, toolenv, versions,
+                        yara_adapter)
 from ..core import vendor_manifest, vendor_pins
 
 
@@ -58,6 +59,11 @@ def status_lines() -> list[str]:
                      f"NOT INSTALLED (Office decryption disabled: {edition.hint('msoffcrypto')})")
     lines += library("jsbeautifier", "jsbeautifier",
                      "not installed (optional: JavaScript is shown with a basic formatter)")
+    lines += library("yara-python", "yara", f"not installed (YARA scanning unavailable: {edition.hint('yara')})")
+    from .yara_view import rules_setting
+    rules = rules_setting()
+    lines.append(row("", " ", f"YARA rules: {rules} ({len(yara_adapter.rule_files(rules))} rule files)"
+                     if rules else "YARA rules: none set (File → YARA rules…)"))
     lib = pdf_crypto.available()
     lines.append(row("PDF decryption", f"{lib} {vs.get(lib, '')}".strip() if lib else "",
                      "available" if lib else f"unavailable ({edition.hint('pikepdf')})"))

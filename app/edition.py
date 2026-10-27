@@ -46,6 +46,7 @@ _STANDARD_HINTS = {
     "oletools": "pip install oletools",
     "msoffcrypto": "pip install msoffcrypto-tool",
     "pikepdf": "pip install pikepdf",
+    "yara": "pip install yara-python",
 }
 _REMNUX_HINTS = {
     "tools": "not found on this VM: check PATH, or sudo remnux upgrade",
@@ -54,6 +55,7 @@ _REMNUX_HINTS = {
     "oletools": "run ./install.sh",
     "msoffcrypto": "run ./install.sh",
     "pikepdf": "run ./install.sh",
+    "yara": "run ./install.sh",
 }
 
 

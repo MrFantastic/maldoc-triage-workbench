@@ -107,6 +107,11 @@ def _pdf_decrypt(path, out_dir, password=""):
     return list(pdf_crypto.decrypt(path, out_dir, password))
 
 
+def _yara_scan(path, files, zip_parts):
+    from .adapters import yara_adapter
+    return yara_adapter.scan(path, files, zip_parts)
+
+
 def _selftest_sleep(seconds):
     import time
     time.sleep(float(seconds))
@@ -135,6 +140,7 @@ TASKS = {
     "meta.read": _meta_read,
     "js.beautify": _js_beautify,
     "pdf.decrypt": _pdf_decrypt,
+    "yara.scan": _yara_scan,
     "selftest.sleep": _selftest_sleep,
     "selftest.echo": _selftest_echo,
     "selftest.python": _selftest_python,

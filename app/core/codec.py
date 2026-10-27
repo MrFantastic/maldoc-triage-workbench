@@ -30,14 +30,14 @@ def _register_defaults() -> None:
     if _CLASSES:
         return
     from . import models, router
-    from ..adapters import container_adapter, macro_adapter, office_adapter, pdfid_adapter
+    from ..adapters import container_adapter, macro_adapter, office_adapter, pdfid_adapter, yara_adapter
     register(models.Severity, models.Family, models.Finding, models.ToolResult, router.RouteInfo,
              pdfid_adapter.PdfidOptions, pdfid_adapter.KeywordRow, pdfid_adapter.PdfidData,
              office_adapter.Indicator, office_adapter.MacroModule, office_adapter.OfficeTriageData,
              macro_adapter.Module, macro_adapter.AnalysisRow, macro_adapter.MacroData,
              macro_adapter.MacroOptions,
              container_adapter.Part, container_adapter.Relationship, container_adapter.PartsData,
-             container_adapter.MetaData)
+             container_adapter.MetaData, yara_adapter.YaraMatch, yara_adapter.YaraData)
 
 
 def encode(obj: Any) -> Any:

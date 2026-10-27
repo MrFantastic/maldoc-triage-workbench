@@ -438,6 +438,16 @@ GUIDES: dict[str, Guide] = {
         "Damaged downloads or truncated attachments.",
         [S("Look at the end of the file, where the zip directory lives", "hex:end"),
          S("Get a clean copy from the sender or the original mail before deciding", "")]),
+    "yara:match": Guide(
+        "YARA rule matched",
+        "One of your YARA rules matched the file, or something inside it (a stream, object or "
+        "part, after the tools decoded it).",
+        "A rule written for a malware family, exploit or technique is a strong lead about what "
+        "the file is and what to look at next.",
+        "Rules vary: broad ones (any macro, any URL, any PE header) also match ordinary files. "
+        "Check what the rule looks for before trusting the match.",
+        [S("Open the YARA results to see where it matched and the matched text", "tab:yara"),
+         S("Read the rule (its strings and condition) in your rules file", "")]),
     "router:late_pdf": Guide("Embedded PDF marker", "A %PDF marker exists deep inside the file.", "", "",
                              [S("Look at it in hex", "hex:{offset}")]),
 }

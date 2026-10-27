@@ -1,3 +1,4 @@
 # Optional, recommended: each is used when installed and skipped otherwise.
 defusedxml>=0.7     # hardened XML parsing of Office package parts
 pikepdf>=8          # Decrypt PDF (pypdf, installed with peepdf, is the fallback)
+yara-python>=4.3    # YARA scanning with your own rules (File → YARA rules…)

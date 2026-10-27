@@ -37,6 +37,7 @@ from .peepdf_view import PeepdfView
 from .report_view import ReportView
 from .side_panels import FindingsPanel, SamplePanel
 from .streams_view import StreamsView
+from .yara_view import YaraView, choose_rules
 from .theme import apply_font, apply_mono, apply_theme
 from .workers import JobRunner
 
@@ -297,6 +298,7 @@ class MainWindow(QMainWindow):
         self._add(m_file, "&Export session (JSON)…", self.export_session, "Ctrl+E")
         self._add(m_file, "Export &artifacts (zip, password 'infected')…", self.export_artifacts)
         self._add(m_file, "Set &output folder…", self.choose_output_dir)
+        self._add(m_file, "&YARA rules…", self.choose_yara_rules)
         m_file.addSeparator()
         self._add(m_file, "&Quit", self.close, QKeySequence.StandardKey.Quit)
 
@@ -450,6 +452,7 @@ class MainWindow(QMainWindow):
                                ObjectsView.SOURCES + ("objects",), True)
             if family in (Family.OLE, Family.OOXML):
                 self._add_view(MetadataView(self, family), "Metadata", ("metadata",), True)
+        self._add_view(YaraView(self), "YARA", YaraView.SOURCES, True)
         self._add_view(ReportView(self), "Report", ("report",), False)
         self.tabs.addTab(self.hex_panel, "Hex")
         if first is not None:
@@ -741,6 +744,10 @@ class MainWindow(QMainWindow):
         if path:
             self.settings.setValue("output_dir", path)
             self._update_status()
+
+    def choose_yara_rules(self) -> None:
+        if choose_rules(self) and "yara" in self._tool_views:
+            self._tool_views["yara"].run()
 
     def show_safety(self) -> None:
         QMessageBox.information(self, "Safety notes", SAFETY_TEXT)

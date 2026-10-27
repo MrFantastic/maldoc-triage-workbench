@@ -33,7 +33,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # peepdf is not listed: setup_vendor.py --peepdf installs it without its JavaScript engine.
-safety = ["defusedxml>=0.7", "pikepdf>=8"]
+safety = ["defusedxml>=0.7", "pikepdf>=8", "yara-python>=4.3"]
 xlm = ["XLMMacroDeobfuscator>=0.2.7"]
 
 [tool.ruff]

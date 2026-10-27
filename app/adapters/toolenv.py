@@ -1,5 +1,5 @@
 """Which Python environment provides the libraries the worker tasks import:
-oletools, msoffcrypto-tool and jsbeautifier.
+oletools, msoffcrypto-tool, jsbeautifier and yara-python.
 
 REMnux installs each tool in its own environment (/opt/oletools,
 /opt/msoffcrypto-tool, /opt/peepdf-3, ...) behind a launcher on PATH, and no other
@@ -47,6 +47,9 @@ LIBRARIES = {
                            ("/opt/msoffcrypto-tool/bin/python3", "/opt/oletools/bin/python3")),
     "jsbeautifier": Library("jsbeautifier", ("jsbeautifier",), "jsbeautifier",
                             ("peepdf",), ("/opt/peepdf-3/bin/python3",)),
+    # REMnux gives Didier Stevens' tools a Python with yara-python
+    "yara": Library("yara", ("yara",), "yara-python",
+                    ("oledump.py", "pdf-parser.py", "pdfid.py"), ("/opt/didier-stevens/bin/python3",)),
 }
 
 # worker task -> the library it needs
@@ -56,6 +59,7 @@ TASK_LIBRARY = {
     "macro.is_encrypted": "msoffcrypto",
     "macro.decrypt": "msoffcrypto",
     "js.beautify": "jsbeautifier",
+    "yara.scan": "yara",
 }
 
 
