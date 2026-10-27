@@ -3,15 +3,19 @@
 zipfile reads the whole central directory into memory and builds one ZipInfo object per
 entry before the app can apply any limit, so a crafted archive (up to the 256 MB sample
 limit) could make it allocate gigabytes. This module finds the end-of-central-directory
-record exactly the way zipfile does (including the ZIP64 record), then checks that what
-it declares is consistent and within budget, and counts the directory entries without
-building any objects. Only an archive that passes is handed to zipfile.
+record exactly the way zipfile does, including the ZIP64 record (found through the
+locator's offset, with any "extensible data", as current zipfile does since the fix for
+CVE-2025-8291), then checks that what it declares is consistent and within budget, and
+counts the directory entries without building any objects. Only an archive that passes
+is handed to zipfile.
 
-Rejected: no end record; multi-disk; ZIP64 markers without a ZIP64 record (or a locator
-without its record); a directory that starts before the file or runs past the end
-record; a directory larger than MAX_CD_BYTES; more than MAX_ENTRIES entries; an entry
-count the directory can't hold; a directory entry with a bad signature or that overruns
-the directory; a declared count that doesn't match the entries actually present.
+Rejected: no end record; multi-disk; ZIP64 markers without a ZIP64 record; a ZIP64
+locator that points nowhere valid, or a ZIP64 record that doesn't match it; two
+different ZIP64 records (older zipfile versions would read the other one); a directory
+that starts before the file or runs past the end record; a directory larger than
+MAX_CD_BYTES; more than MAX_ENTRIES entries; an entry count the directory can't hold; a
+directory entry with a bad signature or that overruns the directory; a declared count
+that doesn't match the entries actually present.
 """
 from __future__ import annotations
 
@@ -89,19 +93,31 @@ def _check(fp, max_entries: int, max_cd_bytes: int) -> ZipCheck:
         fp.seek(eocd_at - _LOC64.size)
         loc = fp.read(_LOC64.size)
         if len(loc) == _LOC64.size and loc[:4] == _LOC64_SIG:
-            _s, loc_disk, _rel, disks = _LOC64.unpack(loc)
+            _s, loc_disk, reloff, disks = _LOC64.unpack(loc)
             if loc_disk != 0 or disks > 1:
                 return _bad("ZIP64 multi-disk archive")
-            rec_at = eocd_at - _LOC64.size - _EOCD64.size
-            if rec_at < 0:
-                return _bad("ZIP64 locator without a ZIP64 end record")
-            fp.seek(rec_at)
-            rec = fp.read(_EOCD64.size)
-            if len(rec) != _EOCD64.size or rec[:4] != _EOCD64_SIG:
-                return _bad("ZIP64 locator without a ZIP64 end record")
+            # As current zipfile does: the record is where the locator points, and may carry
+            # extensible data up to the locator. If it isn't there, data was prepended to the
+            # archive and the record must sit right before the locator, with no extensible data.
+            fixed_at = eocd_at - _LOC64.size - _EOCD64.size
+            if fixed_at < 0 or reloff > fixed_at:
+                return _bad("ZIP64 locator points past where its end record can be")
+
+            def record_at(offset: int) -> bytes:
+                fp.seek(offset)
+                data = fp.read(_EOCD64.size)
+                return data if len(data) == _EOCD64.size and data[:4] == _EOCD64_SIG else b""
+
+            rec, rec_at = record_at(reloff), reloff
+            if not rec and reloff != fixed_at:
+                rec, rec_at = record_at(fixed_at), fixed_at
+            if not rec:
+                return _bad("ZIP64 locator points to no ZIP64 end record")
+            if rec_at != fixed_at and record_at(fixed_at):
+                return _bad("two different ZIP64 end records")      # older zipfile reads the second one
             (_s, rec_size, _cv, _rv, disk, cd_disk, n_disk, n_total, cd_size, cd_offset) = _EOCD64.unpack(rec)
-            if rec_size < _EOCD64.size - 12:
-                return _bad("ZIP64 end record too short")
+            if rec_size + 12 != _EOCD64.size + (fixed_at - rec_at) or cd_offset + cd_size != reloff:
+                return _bad("ZIP64 end record doesn't match its locator")
             zip64 = True
             cd_end = rec_at
     if not zip64 and (0xFFFF in (n_disk, n_total) or 0xFFFFFFFF in (cd_size, cd_offset)):

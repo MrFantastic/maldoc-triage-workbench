@@ -73,8 +73,8 @@ class PartsView(QWidget):
         if sess is None:
             return
         self.info.setText("Reading package…")
-        self.ctx.runner.submit(isolated.read_parts, self._on_parts, self._parts_err, sess.sample.path)
-        self.ctx.runner.submit(ca.run_zipdump, self._on_zipdump, self._err, sess.sample.path)
+        self.ctx.runner.submit(isolated.read_parts, self._on_parts, self._parts_err, sess.sample.work_path)
+        self.ctx.runner.submit(ca.run_zipdump, self._on_zipdump, self._err, sess.sample.work_path)
 
     def _err(self, msg: str) -> None:
         self.info.setText(f"<b>Failed:</b> {html.escape(isolated.tidy(msg))}")
@@ -148,7 +148,7 @@ class PartsView(QWidget):
         self.content.setPlainText("Reading part…")
         self.hex.set_data(b"")
         self.ctx.runner.submit(isolated.preview_part, lambda r: self._on_preview(p, r),
-                               lambda m: self._on_preview_err(p, m), self.ctx.session().sample.path, p.name)
+                               lambda m: self._on_preview_err(p, m), self.ctx.session().sample.work_path, p.name)
 
     def _on_preview_err(self, p: ca.Part, msg: str) -> None:
         if p.name == self._preview_for:
@@ -181,7 +181,7 @@ class PartsView(QWidget):
         self.ctx.runner.submit(isolated.extract_part, lambda r: then(p, sess, r),
                                lambda m: QMessageBox.warning(self, "Could not extract part",
                                                              isolated.tidy(m)),
-                               sess.sample.path, p.name, self.ctx.output_dir())
+                               sess.sample.work_path, p.name, self.ctx.output_dir())
 
     def save_part(self) -> None:
         def done(p, _sess, result):

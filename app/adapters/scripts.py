@@ -458,18 +458,18 @@ def _run_contained(cmd, display, timeout, cwd, input_bytes, max_output, limits, 
 
 _net_lock = threading.Lock()
 _net_state: list[bool] = []
-_NET_PROBE = ("import os, sys\nopen(sys.argv[1], 'rb').close()\n"   # can still read the app's own files
-              "print(os.readlink('/proc/self/ns/net'))")
 
 
 def _isolation_works() -> bool:
     """Linux: True if a tool started with --no-net really gets its own network namespace and
-    can still read this app's files. Checked once, for real, with a throwaway process."""
-    if not sys.platform.startswith("linux") or getattr(sys, "frozen", False):
+    can still read this app's files. Checked once, for real, with a throwaway helper process
+    (run.py --net-probe, which a frozen build runs as its own executable)."""
+    if not sys.platform.startswith("linux"):
         return False
     with _net_lock:
         if not _net_state:
-            r = _run_contained([sys.executable, "-I", "-c", _NET_PROBE, RUN_PY], "network check", 30,
+            own_file = sys.executable if getattr(sys, "frozen", False) else RUN_PY
+            r = _run_contained(self_command("--net-probe", own_file), "network check", 30,
                                None, None, None, None, no_net=True)
             theirs = r.stdout.decode("utf-8", "replace").strip()
             try:
@@ -484,7 +484,7 @@ def tools_have_network() -> bool | None:
     """Whether the tools the app starts can reach a network: False on Linux when each runs in
     its own empty network namespace, True on Linux when this system doesn't allow that, None on
     Windows / macOS (the app doesn't restrict the network there)."""
-    if not sys.platform.startswith("linux") or getattr(sys, "frozen", False):
+    if not sys.platform.startswith("linux"):
         return None
     return not _isolation_works()
 

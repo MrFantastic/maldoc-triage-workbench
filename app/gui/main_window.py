@@ -4,7 +4,10 @@ from __future__ import annotations
 import datetime as _dt
 import html
 import os
+import shutil
 import sys
+import tempfile
+import time
 
 from PySide6.QtCore import QSettings, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QKeySequence
@@ -78,6 +81,7 @@ class MainWindow(QMainWindow):
         self.settings = QSettings()
         self.runner = JobRunner(self)
         self._error_shown = False
+        self._work_root = ""          # this window's folder for private copies of samples
         self.internal_error.connect(self._show_internal_error)
         self._session: Session | None = None
         self._tool_views: dict[str, QWidget] = {}
@@ -190,6 +194,7 @@ class MainWindow(QMainWindow):
 
     def log(self, message: str, command: bool = False) -> None:
         if command and self._session is not None:
+            message = self._session.sample.shown(message)    # name the original, not the private copy
             self._session.commands.append(message)
         ts = _dt.datetime.now().strftime("%H:%M:%S")
         prefix = "$ " if command else ""
@@ -233,6 +238,25 @@ class MainWindow(QMainWindow):
         path = self.settings.value("output_dir", default_output_dir())
         os.makedirs(path, exist_ok=True)
         return path
+
+    def _work_dir(self) -> str:
+        """Where this window keeps the private copies the tools read: <output folder>/.work/<run>.
+        The output folder is the analysis folder (excluded from AV on Windows), so a copy there
+        isn't quarantined mid-analysis. Copies are deleted on close; leftovers from a crash are
+        removed when they're 3 days old."""
+        if not self._work_root:
+            root = os.path.join(self.output_dir(), ".work")
+            os.makedirs(root, exist_ok=True)
+            cutoff = time.time() - 3 * 86400
+            for name in os.listdir(root):
+                old = os.path.join(root, name)
+                try:
+                    if os.path.isdir(old) and os.path.getmtime(old) < cutoff:
+                        shutil.rmtree(old, ignore_errors=True)
+                except OSError:
+                    pass
+            self._work_root = tempfile.mkdtemp(prefix=f"run{os.getpid()}-", dir=root)
+        return self._work_root
 
     def show_in_hex(self, offset: int | None = None, needle: bytes | None = None) -> None:
         self.tabs.setCurrentWidget(self.hex_panel)
@@ -365,7 +389,7 @@ class MainWindow(QMainWindow):
         self._pending_parent = parent_note
         self.log(f"Loading {path}")
         self.runner.submit(Sample.load, self._on_loaded,
-                           lambda msg: self._load_failed(path, msg), path)
+                           lambda msg: self._load_failed(path, msg), path, work_dir=self._work_dir())
 
     def _on_busy(self, busy: bool) -> None:
         self.busy.setText("Working…" if busy else "")
@@ -443,8 +467,11 @@ class MainWindow(QMainWindow):
         if not s.verify_unchanged():
             QMessageBox.warning(self, "Sample changed on disk",
                                 f"{s.path}\n\nThe file's SHA256 no longer matches what was loaded. "
-                                "Something modified or removed the original during analysis.")
+                                "Something modified or removed the original during analysis. (The tools "
+                                "analysed a private copy of the loaded bytes, so the results match the "
+                                "hashes shown.)")
             self.log(f"WARNING: {s.name} changed on disk during analysis")
+        s.discard_copy()
         self._session = None
         self.runner.new_generation()
         # Detach the shared hex panel before clearing so it isn't deleted with the tabs
@@ -624,7 +651,7 @@ class MainWindow(QMainWindow):
             return
         self.log("Decrypting the PDF in a worker process…")
         self.runner.submit(isolated.pdf_decrypt, lambda r: self._on_pdf_decrypted(r, sess),
-                           self._on_pdf_decrypt_failed, sess.sample.path, self.output_dir(), password)
+                           self._on_pdf_decrypt_failed, sess.sample.work_path, self.output_dir(), password)
 
     def _on_pdf_decrypted(self, result, sess: Session) -> None:
         dest, lib = result
@@ -835,6 +862,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, e) -> None:
         self.close_sample()
+        if self._work_root:
+            shutil.rmtree(self._work_root, ignore_errors=True)
         self.settings.setValue("geometry", self.saveGeometry())
         self.settings.setValue("window_state", self.saveState())
         self.settings.setValue("left_split", self.left_split.saveState())

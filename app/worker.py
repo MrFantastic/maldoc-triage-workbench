@@ -5,6 +5,7 @@ here, in a separate process the GUI can time out and kill.
     run.py --run-script <file.py> [args]    run a vendored tool script (frozen builds)
     run.py --run-module <module> [args]     python -m <module> equivalent (frozen builds)
     run.py --run-callable <mod:func> [args] call a console entry point (frozen builds)
+    run.py --net-probe <file>               network-isolation self-check (scripts._isolation_works)
 
 This module must not import Qt.
 """
@@ -231,8 +232,18 @@ def run_callable_main(argv: list[str]) -> int:
     return rv if isinstance(rv, int) else 0
 
 
+def net_probe_main(argv: list[str]) -> int:
+    """run.py --net-probe FILE: read FILE (one of the app's own) and print this process's network
+    namespace; scripts._isolation_works compares it with the app's. Works in frozen builds too."""
+    with open(argv[0], "rb"):
+        pass
+    print(os.readlink("/proc/self/ns/net"))
+    return 0
+
+
 MODES = {"--worker": lambda argv: worker_main(), "--run-script": run_script_main,
-         "--run-module": run_module_main, "--run-callable": run_callable_main}
+         "--run-module": run_module_main, "--run-callable": run_callable_main,
+         "--net-probe": net_probe_main}
 
 
 def dispatch(argv: list[str]) -> int | None:

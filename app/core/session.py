@@ -5,6 +5,8 @@ import datetime as _dt
 import hashlib
 import json
 import os
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -21,13 +23,23 @@ class SampleTooLarge(Exception):
 
 @dataclass
 class Sample:
-    """The file under analysis: its bytes, hashes and route."""
+    """The file under analysis: its bytes, hashes and route.
+
+    path is the original file (shown, re-hashed on close, used in commands you copy).
+    work_path is what every tool reads: a private copy of exactly the bytes that were
+    hashed (see load), so the hashes always describe what was analysed, even if the
+    original changes or is replaced during analysis."""
     path: str
     data: bytes
     md5: str
     sha1: str
     sha256: str
     route: RouteInfo
+    work_path: str = ""          # "" = the original itself (no private copy)
+
+    def __post_init__(self) -> None:
+        if not self.work_path:
+            self.work_path = self.path
 
     @property
     def name(self) -> str:
@@ -41,8 +53,21 @@ class Sample:
     def family(self) -> Family:
         return self.route.family
 
+    def shown(self, text: str) -> str:
+        """text (e.g. a tool's command line) with the private copy's path replaced by the original's."""
+        if not text or self.work_path == self.path:
+            return text
+        from .safety import quote_arg
+        return text.replace(quote_arg(self.work_path), quote_arg(self.path)).replace(self.work_path, self.path)
+
+    def discard_copy(self) -> None:
+        """Delete the private copy and its folder."""
+        if self.work_path != self.path:
+            shutil.rmtree(os.path.dirname(self.work_path), ignore_errors=True)
+
     def verify_unchanged(self) -> bool:
-        """Re-hash the file on disk; False means something modified the original."""
+        """Re-hash the original on disk; False means something modified it. (The analysis itself
+        used the private copy, so its results still match the hashes shown.)"""
         try:
             with open(self.path, "rb") as fh:
                 return hashlib.sha256(fh.read()).hexdigest() == self.sha256
@@ -50,34 +75,53 @@ class Sample:
             return False
 
     @classmethod
-    def load(cls, path: str, max_bytes: int = MAX_SAMPLE_BYTES, isolate: bool = True) -> "Sample":
-        """Read and hash the sample. Its structure (OLE directory, zip listing) is
-        parsed in a worker process; if that fails, a byte-signature-only
-        identification is used and a finding says so."""
+    def load(cls, path: str, max_bytes: int = MAX_SAMPLE_BYTES, isolate: bool = True,
+             work_dir: str | None = None) -> "Sample":
+        """Read (at most max_bytes) and hash the sample. With work_dir, the bytes just hashed
+        are written to a private copy in a new folder under it, and every tool reads that copy.
+        The structure (OLE directory, zip listing) is parsed in a worker process; if that
+        fails, a byte-signature-only identification is used and a finding says so."""
         size = os.path.getsize(path)
         if size > max_bytes:
             raise SampleTooLarge(f"{size:,} bytes exceeds the {max_bytes:,} byte limit")
-        # Opened read-only, read once; tools receive the path, never a writable handle.
+        # Opened read-only and read once, never more than the limit (the file may grow meanwhile).
         with open(path, "rb") as fh:
-            data = fh.read()
+            data = fh.read(max_bytes + 1)
+        if len(data) > max_bytes:
+            raise SampleTooLarge(f"more than the {max_bytes:,} byte limit (the file grew while loading)")
+        original = os.path.abspath(path)
+        work = _private_copy(original, data, work_dir) if work_dir else original
         return cls(
-            path=os.path.abspath(path),
+            path=original,
             data=data,
             md5=hashlib.md5(data).hexdigest(),
             sha1=hashlib.sha1(data).hexdigest(),
             sha256=hashlib.sha256(data).hexdigest(),
-            route=_route(path, data, isolate),
+            route=_route(work, os.path.basename(original), data, isolate),
+            work_path=work,
         )
 
 
-def _route(path: str, data: bytes, isolate: bool) -> RouteInfo:
+def _private_copy(original: str, data: bytes, work_dir: str) -> str:
+    """Write data to <work_dir>/<new private folder>/<original file name>; return its path.
+    The name is kept because some outputs are named after it."""
+    os.makedirs(work_dir, exist_ok=True)
+    folder = tempfile.mkdtemp(prefix="s", dir=work_dir)        # readable by this user only
+    dest = os.path.join(folder, os.path.basename(original))
+    fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(data)
+    return dest
+
+
+def _route(path: str, name: str, data: bytes, isolate: bool) -> RouteInfo:
     if not isolate:
-        return identify(data, path)
+        return identify(data, name)
     from ..adapters import isolated
     try:
-        return isolated.identify(path, os.path.basename(path))
+        return isolated.identify(path, name)
     except Exception as exc:   # worker crash / timeout: fall back to signatures only
-        route = identify(data, path, deep=False)
+        route = identify(data, name, deep=False)
         route.warnings.append(Finding(
             "router", Severity.MEDIUM, "File structure could not be parsed",
             f"Identification fell back to byte signatures only: {exc}",

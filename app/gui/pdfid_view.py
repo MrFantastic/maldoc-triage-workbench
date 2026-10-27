@@ -183,7 +183,7 @@ class PdfidView(QWidget):
             return
         opts = self.options()
         self.summary.setText("Running pdfid…")
-        self.ctx.runner.submit(isolated.pdfid_run, self._on_result, self._on_error, sess.sample.path, opts)
+        self.ctx.runner.submit(isolated.pdfid_run, self._on_result, self._on_error, sess.sample.work_path, opts)
 
     def _on_error(self, message: str) -> None:
         self.summary.setText(f"<b>pdfid failed:</b> {html.escape(isolated.tidy(message))}")
@@ -263,7 +263,7 @@ class PdfidView(QWidget):
         self.ctx.log("Disarming in a worker process…")
         self.ctx.runner.submit(isolated.pdfid_disarm, self._on_disarmed,
                                lambda m: QMessageBox.warning(self, "Disarm failed", isolated.tidy(m)),
-                               sess.sample.path, self.ctx.output_dir())
+                               sess.sample.work_path, self.ctx.output_dir())
 
     def _on_disarmed(self, result) -> None:
         dest, cmd = result

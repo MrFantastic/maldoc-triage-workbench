@@ -178,7 +178,7 @@ class OfficeTriageView(QWidget):
         if sess is None:
             return
         self.verdict.setText("Running…")
-        self.ctx.runner.submit(isolated.office_run, self._on_result, self._on_error, sess.sample.path)
+        self.ctx.runner.submit(isolated.office_run, self._on_result, self._on_error, sess.sample.work_path)
 
     def _on_error(self, message: str) -> None:
         self.verdict.setText("ERROR")

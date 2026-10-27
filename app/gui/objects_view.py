@@ -92,7 +92,7 @@ class ObjectsView(QWidget):
         if sess is None:
             return
         self.info.setText("Extracting…")
-        self.ctx.runner.submit(oa.extract, self._on_extract, self._extract_err, sess.sample.path,
+        self.ctx.runner.submit(oa.extract, self._on_extract, self._extract_err, sess.sample.work_path,
                                sess.sample.sha256, "RTF" if self.family == Family.RTF else "OLE",
                                self.ctx.output_dir())
 
@@ -134,7 +134,7 @@ class ObjectsView(QWidget):
         sess = self.ctx.session()
         if sess is None:
             return
-        self.ctx.runner.submit(oa.msodde, self._on_dde, self._dde_err, sess.sample.path)
+        self.ctx.runner.submit(oa.msodde, self._on_dde, self._dde_err, sess.sample.work_path)
 
     def _on_dde(self, res: ToolResult) -> None:
         self.ctx.log(res.command, command=True)
@@ -155,7 +155,7 @@ class ObjectsView(QWidget):
         if sess is None:
             return
         self.rtf_raw.setPlainText("Running…")
-        self.ctx.runner.submit(oa.rtfdump, self._on_rtfdump, self._err, sess.sample.path, objects_only)
+        self.ctx.runner.submit(oa.rtfdump, self._on_rtfdump, self._err, sess.sample.work_path, objects_only)
 
     def _on_rtfdump(self, r) -> None:
         if r.returncode != 127:

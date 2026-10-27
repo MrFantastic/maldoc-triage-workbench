@@ -48,7 +48,30 @@ def to_zip64(data: bytes, n_override=None) -> bytes:
     return data[:at] + rec + loc + end
 
 
+def zip64_layout(data: bytes, ext: bytes = b"") -> bytes:
+    """Like to_zip64, with optional ZIP64 extensible data in the record."""
+    at = data.rfind(b"PK\x05\x06")
+    _s, _d, _cd, _n, total, size, offset, _c = EOCD.unpack_from(data, at)
+    rec = struct.pack("<4sQ2H2L4Q", b"PK\x06\x06", 44 + len(ext), 45, 45, 0, 0, total, total, size, offset) + ext
+    return finish64(data[:at] + rec, at)
+
+
+def finish64(body: bytes, record_offset: int) -> bytes:
+    """Append a ZIP64 locator pointing at record_offset and an end record full of ZIP64 markers."""
+    loc = struct.pack("<4sLQL", b"PK\x06\x07", 0, record_offset, 1)
+    return body + loc + EOCD.pack(b"PK\x05\x06", 0, 0, 0xFFFF, 0xFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0)
+
+
 class ZipCheckTests(unittest.TestCase):
+    def assertZipfileReads(self, data, n):
+        """zipfile reads the same entries, where this Python's zipfile supports the layout
+        (extensible data needs a zipfile with the CVE-2025-8291 fix)."""
+        try:
+            names = zipfile.ZipFile(io.BytesIO(data)).namelist()
+        except zipfile.BadZipFile as exc:
+            self.skipTest(f"this Python's zipfile can't read it: {exc}")
+        self.assertEqual(len(names), n)
+
     def assertRejected(self, data, fragment, **kw):
         result = zipcheck.check(data, **kw)
         self.assertFalse(result.ok, f"accepted: {result}")
@@ -105,7 +128,46 @@ class ZipCheckTests(unittest.TestCase):
         data = make_zip(2)
         at = data.rfind(b"PK\x05\x06")
         loc = struct.pack("<4sLQL", b"PK\x06\x07", 0, 0, 1)        # locator with no record before it
-        self.assertRejected(data[:at] + loc + data[at:], "without a ZIP64 end record")
+        self.assertRejected(data[:at] + loc + data[at:], "no ZIP64 end record")
+
+    def test_zip64_extensible_data_like_zipfile(self):
+        data = zip64_layout(make_zip(3), ext=b"E" * 24)          # extensible data, which ZIP64 allows
+        r = zipcheck.check(data)
+        self.assertTrue(r.ok, r.reason)
+        self.assertEqual((r.entries, r.zip64, r.prefix), (3, True, 0))
+        self.assertZipfileReads(data, 3)
+
+    def test_zip64_with_prefix_like_zipfile(self):
+        data = b"MZ stub " * 8 + zip64_layout(make_zip(2))            # data prepended to a ZIP64 archive
+        r = zipcheck.check(data)
+        self.assertTrue(r.ok, r.reason)
+        self.assertEqual((r.entries, r.prefix), (2, 64))
+        self.assertZipfileReads(data, 2)
+
+    def test_zip64_record_hidden_in_another(self):
+        """The locator points at a record describing many entries; a second record right before
+        the locator (inside the first one's extensible data) describes only two. Current
+        zipfile follows the locator, so the check must too, and older zipfile reads the
+        second one, so two records are refused."""
+        big = make_zip(30)
+        at = big.rfind(b"PK\x05\x06")
+        _s, _d, _cd, _n, total, size, offset, _c = EOCD.unpack_from(big, at)
+        two = big[offset:offset + 2 * (46 + len("part0.xml"))]
+        inner = struct.pack("<4sQ2H2L4Q", b"PK\x06\x06", 44, 45, 45, 0, 0, 2, 2, len(two), at + 56)
+        outer = struct.pack("<4sQ2H2L4Q", b"PK\x06\x06", 44 + len(two) + 56, 45, 45, 0, 0,
+                            total, total, size, offset) + two + inner
+        data = finish64(big[:at] + outer, at)
+        self.assertRejected(data, "two different ZIP64 end records", max_entries=20)
+
+    def test_zip64_record_must_match_locator(self):
+        data = bytearray(zip64_layout(make_zip(3)))
+        rec = data.rfind(b"PK\x06\x06")
+        struct.pack_into("<Q", data, rec + 4, 60)                      # wrong record size
+        self.assertRejected(bytes(data), "doesn't match its locator")
+        data = make_zip(3)
+        at = data.rfind(b"PK\x05\x06")
+        loc = struct.pack("<4sLQL", b"PK\x06\x07", 0, len(data) * 4, 1)  # points past the end
+        self.assertRejected(data[:at] + loc + data[at:], "points past")
 
     def test_corrupt_and_truncated(self):
         data = bytearray(make_zip(3))

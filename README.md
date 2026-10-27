@@ -76,9 +76,10 @@ REMnux edition.
 The Workbench is for **one-off analysis: deciding whether a single file is
 malicious**. It is not a case-triage or record-management system, so there are
 no case trees, saved cases or case folders. It favors getting a trustworthy
-answer about one file quickly and safely: every parser that reads the sample is
-isolated, nothing from the sample is ever executed, and when a tool can't run
-the verdict says INCOMPLETE instead of "clean".
+answer about one file quickly and safely: every parser that reads the sample runs
+in its own limited process, nothing from the sample is executed (apart from XLM
+emulation, which you start yourself and which evaluates the macro formulas), and
+when a tool can't run the verdict says INCOMPLETE instead of "clean".
 
 ## Tabs by file type
 
@@ -279,7 +280,9 @@ layers inside it.
   only from one pinned commit and installed only if every file matches its pinned
   SHA-256, and they are hash-checked again at startup (see Install). Release zips carry
   signed build provenance.
-- The original file is re-hashed on close, and the app warns if it changed. App errors
+- Every tool reads a private copy of exactly the bytes that were loaded and hashed, so the
+  results always match the hashes shown. The original is re-hashed on close, and the app
+  warns if it changed. App errors
   are written to `~/MTW_output/logs/` and shown in the log panel.
 
 ### What it doesn't protect against

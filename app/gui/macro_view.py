@@ -192,7 +192,7 @@ class MacroView(QWidget):
             return
         self.banner.setText("Running olevba…")
         self.ctx.runner.submit(_check_and_analyse, self._on_result, self._on_error,
-                               sess.sample.path, self.options())
+                               sess.sample.work_path, self.options())
 
     def _on_error(self, message: str) -> None:
         self.banner.setText(f"<b>olevba failed:</b> {html.escape(isolated.tidy(message))}")
@@ -387,7 +387,7 @@ class MacroView(QWidget):
             return
         self.xlm_text.setPlainText("Emulating XLM macros… (stops automatically after 5 minutes)")
         self.lower.setCurrentWidget(self.xlm_text)
-        self.ctx.runner.submit(ma.emulate_xlm, self._on_xlm, self._on_xlm_error, sess.sample.path)
+        self.ctx.runner.submit(ma.emulate_xlm, self._on_xlm, self._on_xlm_error, sess.sample.work_path)
 
     def _on_xlm_error(self, message: str) -> None:
         self.xlm_text.setPlainText(f"XLM emulation failed: {message}")
@@ -414,7 +414,7 @@ class MacroView(QWidget):
         self.ctx.log("Decrypting in a worker process…")
         self.ctx.runner.submit(isolated.macro_decrypt, lambda r: self._on_decrypted(r, sess),
                                lambda m: self._on_decrypt_failed(m, password),
-                               sess.sample.path, self.ctx.output_dir(), password)
+                               sess.sample.work_path, self.ctx.output_dir(), password)
 
     def _on_decrypt_failed(self, message: str, tried: str | None) -> None:
         first = (message.splitlines() or [""])[0]

@@ -117,7 +117,7 @@ class StreamsView(QWidget):
             self.ctx.report_failure("oledump", f"oledump.py not found ({edition.hint('tools')})")
             return
         self.info.setText("Running oledump…")
-        self.ctx.runner.submit(od.run_list, self._on_list, self._list_err, sess.sample.path)
+        self.ctx.runner.submit(od.run_list, self._on_list, self._list_err, sess.sample.work_path)
 
     def _err(self, msg: str) -> None:
         self.info.setText(f"<b>Failed:</b> {html.escape(isolated.tidy(msg))}")
@@ -173,7 +173,7 @@ class StreamsView(QWidget):
             return
         self.output.setPlainText("Running…")
         self.ctx.runner.submit(od.dump_stream, lambda r: self._on_dump(r, mode), self._err,
-                               sess.sample.path, s.index, mode, plugin, self.plugin_opts.text().strip())
+                               sess.sample.work_path, s.index, mode, plugin, self.plugin_opts.text().strip())
 
     def _on_dump(self, r, mode: str) -> None:
         self.ctx.log(r.command, command=True)
@@ -207,7 +207,7 @@ class StreamsView(QWidget):
                 self.ctx.log(f"⚠ Stream {s.index} was cut off at {len(r.stdout):,} bytes (output limit): "
                              "the saved copy is incomplete.")
             then(s, sess, r.stdout)
-        self.ctx.runner.submit(od.dump_stream, done, self._err, sess.sample.path, s.index, "raw")
+        self.ctx.runner.submit(od.dump_stream, done, self._err, sess.sample.work_path, s.index, "raw")
 
     def save_stream(self) -> None:
         def then(s, _sess, data):
@@ -242,7 +242,7 @@ class StreamsView(QWidget):
         if sess is None:
             return
         self.adv_text.setPlainText("Running…")
-        self.ctx.runner.submit(fn, self._on_adv, self._err, sess.sample.path)
+        self.ctx.runner.submit(fn, self._on_adv, self._err, sess.sample.work_path)
 
     def run_custom(self) -> None:
         sess = self.ctx.session()
@@ -256,7 +256,7 @@ class StreamsView(QWidget):
             self.adv_text.setPlainText(f"Could not parse arguments: {exc}")
             return
         self.adv_text.setPlainText("Running…")
-        self.ctx.runner.submit(od.run_raw, self._on_adv, self._err, sess.sample.path, args)
+        self.ctx.runner.submit(od.run_raw, self._on_adv, self._err, sess.sample.work_path, args)
 
     def _on_adv(self, r) -> None:
         self.ctx.log(r.command, command=True)

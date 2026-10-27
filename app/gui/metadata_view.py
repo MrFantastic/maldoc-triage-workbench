@@ -47,7 +47,7 @@ class MetadataView(QWidget):
         if sess is None:
             return
         fam = "OLE" if self.family == Family.OLE else "OOXML"
-        self.ctx.runner.submit(isolated.read_metadata, self._on_result, self._on_error, sess.sample.path, fam)
+        self.ctx.runner.submit(isolated.read_metadata, self._on_result, self._on_error, sess.sample.work_path, fam)
 
     def _on_error(self, message: str) -> None:
         self.info.setText(f"<b>Metadata unavailable:</b> {html.escape(isolated.tidy(message))}")

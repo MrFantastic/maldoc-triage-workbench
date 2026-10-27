@@ -3,6 +3,33 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## 1.5.1 (2026-10-26)
+
+Fixes from an external code review of 1.5.0.
+
+### Fixed
+- **The hashes always describe what was analysed.** Every tool now reads a private copy
+  of exactly the bytes that were loaded and hashed (in a `.work` folder inside the
+  output folder, deleted when the sample is closed). Before, the tools reopened the
+  original, so a file changed or replaced during analysis could make the results and
+  the hashes disagree. Commands that are shown, copied or put in the report still name
+  the original file (a tool's own output may show the copy's path). The original is
+  still re-hashed on close, with a warning if it changed.
+- **The sample read is bounded.** A file that grew after its size was checked could be
+  read past the 256 MB limit; the read itself now stops at the limit.
+- **ZIP64 archives are found the way current Python finds them.** The ZIP check now
+  follows the ZIP64 locator's offset, as `zipfile` does since the fix for CVE-2025-8291.
+  ZIP64 records with extensible data are no longer rejected, and a crafted file can no
+  longer show the check one ZIP64 record while `zipfile` reads another (which could pass
+  an archive over the 20,000-entry limit). A file with two different ZIP64 records is
+  refused.
+- **Standalone (PyInstaller) Linux builds** now get the same network isolation for tools:
+  the self-check runs through the app's own executable. Help → Tool status no longer
+  says "on this OS" on Linux.
+- **Wording:** README's design philosophy no longer says nothing is ever executed, and
+  the report's footer says when XLM emulation was run (it evaluates the sample's macro
+  formulas).
+
 ## 1.5.0 (2026-10-26)
 
 ### Security

@@ -124,7 +124,7 @@ class PeepdfView(QWidget):
         if sess is None or not self.available:
             return
         self.info.setText("Running peepdf…")
-        self.ctx.runner.submit(pe.overview, self._on_overview, self._overview_err, sess.sample.path)
+        self.ctx.runner.submit(pe.overview, self._on_overview, self._overview_err, sess.sample.work_path)
 
     def _err(self, msg: str) -> None:
         self.info.setText(f"<b>Failed:</b> {html.escape(isolated.tidy(msg))}")
@@ -198,7 +198,7 @@ class PeepdfView(QWidget):
             return
         commands = [c.strip() for c in text.split(";") if c.strip()]
         self.console_out.setPlainText("Running…")
-        self.ctx.runner.submit(pe.console, self._on_console, self._err, sess.sample.path, commands)
+        self.ctx.runner.submit(pe.console, self._on_console, self._err, sess.sample.work_path, commands)
 
     def _on_console(self, r) -> None:
         if r.returncode == 126:          # refused before running

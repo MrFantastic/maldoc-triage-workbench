@@ -165,7 +165,7 @@ class PdfParserView(QWidget):
             self.ctx.report_failure("pdf-parser", f"pdf-parser.py not found ({edition.hint('tools')})")
             return
         self.info.setText("Parsing with pdf-parser…")
-        self.ctx.runner.submit(pp.run_full, self._on_full, self._err, sess.sample.path)
+        self.ctx.runner.submit(pp.run_full, self._on_full, self._err, sess.sample.work_path)
 
     def _err(self, msg: str) -> None:
         self.info.setText(f"<b>Failed:</b> {html.escape(isolated.tidy(msg))}")
@@ -272,7 +272,7 @@ class PdfParserView(QWidget):
             if not ids:
                 self.id_banner.setText(f"No objects contain {html.escape(term)} (it may be inside an "
                                        "encrypted or compressed stream).")
-        self.ctx.runner.submit(pp.run_args, done, self._err, sess.sample.path, ["-O", "-s", term])
+        self.ctx.runner.submit(pp.run_args, done, self._err, sess.sample.work_path, ["-O", "-s", term])
 
     def _fill_objects(self) -> None:
         if not self.pdf:
@@ -369,7 +369,7 @@ class PdfParserView(QWidget):
             return
         self.stream_text.setPlainText("Decoding…")
         self.ctx.runner.submit(pp.stream_bytes, lambda res: self._on_stream(res, o.id, then_js), self._err,
-                               sess.sample.path, o.id, self.filtered.isChecked(), bool(o.in_objstm))
+                               sess.sample.work_path, o.id, self.filtered.isChecked(), bool(o.in_objstm))
 
     def _on_stream(self, result, oid: int, then_js: bool = False) -> None:
         data, cmd, err = result

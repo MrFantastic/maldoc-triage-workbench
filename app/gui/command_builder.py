@@ -308,7 +308,9 @@ class CommandBuilder(QWidget):
             r.set_visible(r.matches(q))
 
     # ------------------------------------------------------------ command
-    def args(self) -> list[str]:
+    def args(self, shown: bool = False) -> list[str]:
+        """The arguments to run with (the sample's private copy), or with shown=True to display
+        and copy (the original file)."""
         values = {r.opt.flag: r.get() for r in self.rows}
         out = ct.values_to_args([r.opt for r in self.rows], values)
         extra = self.extra.text().strip()
@@ -319,13 +321,13 @@ class CommandBuilder(QWidget):
                 out += extra.split()
         sess = self.ctx.session()
         if self.with_sample.isChecked() and sess is not None and ct.TOOLS[self.current_tool()].takes_sample:
-            out.append(sess.sample.path)
+            out.append(sess.sample.path if shown else sess.sample.work_path)
         return out
 
     def _update(self) -> None:
         tool = self.current_tool()
         name = ct.TOOLS[tool].target if ct.TOOLS.get(tool) and ct.TOOLS[tool].kind == "script" else tool
-        self.preview.setText(name + " " + " ".join(quote_arg(a) for a in self.args()))
+        self.preview.setText(name + " " + " ".join(quote_arg(a) for a in self.args(shown=True)))
 
     def run(self) -> None:
         tool = self.current_tool()
