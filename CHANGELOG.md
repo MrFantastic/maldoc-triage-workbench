@@ -3,7 +3,7 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.6.1 (2026-10-27)
 
 ### Changed
 - **Setup scripts are in per-OS folders.** The standard zip (and the repository) now has

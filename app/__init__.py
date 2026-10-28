@@ -1,4 +1,4 @@
 """Maldoc Triage Workbench: a guided, safety-hardened front-end for the REMnux maldoc tools."""
 
-__version__ = "1.6.0"
+__version__ = "1.6.1"
 APP_NAME = "Maldoc Triage Workbench"

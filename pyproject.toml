@@ -7,7 +7,7 @@
 
 [project]
 name = "maldoc-triage-workbench"
-version = "1.6.0"  # keep in step with app/__init__.py (checked by tests/test_editions.py)
+version = "1.6.1"  # keep in step with app/__init__.py (checked by tests/test_editions.py)
 description = "A guided, safety-hardened desktop front-end for the REMnux maldoc tools"
 readme = "README.md"
 license = { file = "LICENSE" }
