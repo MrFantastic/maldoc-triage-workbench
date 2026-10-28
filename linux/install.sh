@@ -2,12 +2,13 @@
 # One-time setup for Maldoc Triage Workbench (standard edition) on Linux.
 # Creates a private Python environment (.venv), installs the packages, and
 # downloads Didier Stevens' tools into ./vendor. Needs internet access.
+#   linux/install.sh        (run it from anywhere; it works in the app folder above it)
 set -u
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."         # the app folder
 
 # A git clone has no EDITION file, so it would install the standard edition. On a REMnux VM,
 # offer the REMnux edition instead (uses REMnux's own tools, downloads none).
-#   ./install.sh --remnux | --standard     (or MTW_INSTALL_EDITION=remnux|standard) skips the question
+#   linux/install.sh --remnux | --standard     (or MTW_INSTALL_EDITION=remnux|standard) skips the question
 if [ -f packaging/remnux/install.sh ]; then
   choice="${MTW_INSTALL_EDITION:-}"
   case "${1:-}" in --remnux) choice=remnux ;; --standard) choice=standard ;; esac
@@ -61,5 +62,5 @@ echo "[4/4] Installing the Excel 4.0 macro emulator (optional)..."
 if command -v ldconfig >/dev/null 2>&1 && ! ldconfig -p | grep -q libxcb-cursor; then
   echo "note: the GUI needs libxcb-cursor0. If it won't start: sudo apt install libxcb-cursor0"
 fi
-chmod +x start.sh 2>/dev/null
-echo "Setup complete. Run ./start.sh  (or ./start.sh sample.pdf)"
+chmod +x linux/start.sh 2>/dev/null
+echo "Setup complete. Run linux/start.sh  (or linux/start.sh sample.pdf)"

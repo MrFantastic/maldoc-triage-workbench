@@ -2,7 +2,8 @@
 rem One-time setup for Maldoc Triage Workbench on Windows.
 rem Creates a private Python environment (.venv), installs the packages, and
 rem downloads Didier Stevens' tools into .\vendor. Needs internet access.
-cd /d "%~dp0"
+rem It lives in the windows folder and works in the app folder above it.
+cd /d "%~dp0.."
 echo ============================================================
 echo  Maldoc Triage Workbench - setup
 echo ============================================================

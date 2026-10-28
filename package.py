@@ -4,10 +4,11 @@
     python package.py [output folder]          (default: dist/)
 
   maldoc-triage-workbench-<version>-standard.zip
-      Windows / Linux. Fetches its own tools: install.bat / install.sh, setup_vendor.py.
+      Windows / Linux. Fetches its own tools: windows/install.bat or linux/install.sh,
+      setup_vendor.py.
   maldoc-triage-workbench-<version>-remnux.zip
       REMnux VM. Uses the tools REMnux installs; no setup_vendor.py, no vendor folder,
-      no Windows scripts, and its own install.sh and README.
+      no windows/ or linux/ scripts: its own install.sh, start.sh and README at the top.
 """
 from __future__ import annotations
 
@@ -21,8 +22,9 @@ TOP = "maldoc-triage-workbench"
 SKIP_DIRS = {"__pycache__", ".git", ".github", ".vscode", "dist", "build", ".venv", "packaging", "docs"}
 SKIP_FILES = {"package.py", "EDITION", ".gitignore", ".gitattributes", ".editorconfig", "pyproject.toml",
               "CONTRIBUTING.md"}
-STANDARD_ONLY = {"install.bat", "start.bat", "install.sh", "setup_vendor.py", "build.py",
-                 "requirements-peepdf.txt", "requirements-xlm.txt", "requirements.txt"}
+STANDARD_ONLY = {"setup_vendor.py", "build.py", "requirements-peepdf.txt", "requirements-xlm.txt",
+                 "requirements.txt"}
+STANDARD_ONLY_DIRS = ("windows/", "linux/")      # the standard edition's setup scripts, per OS
 EXECUTABLE = {"install.sh", "start.sh", "run.py", "setup_vendor.py"}
 
 
@@ -68,7 +70,7 @@ def build(edition: str, dest: str) -> list[str]:
     with zipfile.ZipFile(dest, "w") as zf:
         for rel in source_files():
             if edition == "remnux":
-                if rel in STANDARD_ONLY or rel.startswith("vendor/"):
+                if rel in STANDARD_ONLY or rel.startswith(("vendor/",) + STANDARD_ONLY_DIRS):
                     continue
                 if rel == "README.md":
                     continue                    # replaced by the REMnux README below
@@ -76,6 +78,7 @@ def build(edition: str, dest: str) -> list[str]:
             names.append(rel)
         if edition == "remnux":
             for rel, src in (("install.sh", "packaging/remnux/install.sh"),
+                             ("start.sh", "packaging/remnux/start.sh"),
                              ("README.md", "packaging/remnux/README.md")):
                 _add(zf, rel, _read(src))
                 names.append(rel)

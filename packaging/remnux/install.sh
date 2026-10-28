@@ -7,7 +7,7 @@
 # anything else REMnux's Python can import is shared into the .venv. Only what
 # REMnux lacks is installed, at the versions in constraints.txt.
 set -u
-cd "${MTW_APP_DIR:-$(dirname "$0")}"   # MTW_APP_DIR: set when run from a git clone's install.sh
+cd "${MTW_APP_DIR:-$(dirname "$0")}"   # MTW_APP_DIR: set when run from a git clone's linux/install.sh
 PY="${PYTHON:-python3}"
 echo "============================================================"
 echo " Maldoc Triage Workbench - setup (REMnux edition)"
@@ -105,5 +105,6 @@ done
 if command -v ldconfig >/dev/null 2>&1 && ! ldconfig -p | grep -q libxcb-cursor; then
   echo "note: under an X11 session the GUI needs libxcb-cursor0. If it won't start: sudo apt install libxcb-cursor0"
 fi
-chmod +x start.sh 2>/dev/null
-echo "Setup complete. Run ./start.sh  (or ./start.sh sample.pdf)"
+start=./start.sh; [ -f start.sh ] || start=linux/start.sh     # REMnux zip, or a git clone
+chmod +x "$start" 2>/dev/null
+echo "Setup complete. Run $start  (or $start sample.pdf)"

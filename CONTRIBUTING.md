@@ -30,7 +30,9 @@ app/adapters/isolated.py  GUI-side calls that run a parser in a worker process
 app/worker.py    the worker entry point (run.py --worker)
 app/gui/         one view per tab; views talk to the window via Context
 tests/           unit tests; tests/samples/ builds harmless test PDFs and Office files
-packaging/       the REMnux edition's install.sh and README
+windows/         the standard edition's Windows scripts (install.bat, start.bat)
+linux/           the standard edition's Linux scripts (install.sh, start.sh)
+packaging/       the REMnux edition's install.sh, start.sh and README (top of its zip)
 vendor/          third-party scripts fetched by setup_vendor.py, unmodified (not committed)
 ```
 

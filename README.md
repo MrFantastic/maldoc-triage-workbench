@@ -59,8 +59,11 @@ No git needed; pick the file for your machine:
 | Your machine | Download | Then |
 |---|---|---|
 | **REMnux VM** | `maldoc-triage-workbench-<version>-remnux.zip` | `unzip` it, `cd maldoc-triage-workbench`, then `./install.sh` and `./start.sh` |
-| **Windows** | `maldoc-triage-workbench-<version>-standard.zip` | Extract it, double-click `install.bat`, then `start.bat` |
-| **Other Linux** (no REMnux tools) | `maldoc-triage-workbench-<version>-standard.zip` | `./install.sh`, then `./start.sh` |
+| **Windows** | `maldoc-triage-workbench-<version>-standard.zip` | Extract it, open the `windows` folder, double-click `install.bat`, then `start.bat` |
+| **Other Linux** (no REMnux tools) | `maldoc-triage-workbench-<version>-standard.zip` | `linux/install.sh`, then `linux/start.sh` |
+
+The standard zip serves both Windows and Linux: the Windows scripts are in its `windows`
+folder and the Linux scripts in its `linux` folder; use the one for your system.
 
 `SHA256SUMS.txt` on the same page lists each zip's SHA-256. Check it before copying a
 download into your analysis VM: `sha256sum -c SHA256SUMS.txt --ignore-missing`. Each zip
@@ -68,8 +71,8 @@ also carries signed build provenance, so you can confirm it was built by this re
 release workflow from a specific commit:
 `gh attestation verify maldoc-triage-workbench-<version>-remnux.zip --repo MrFantastic/maldoc-triage-workbench`.
 
-Cloned the repository instead? On REMnux, `./install.sh` notices and offers to set up the
-REMnux edition.
+Cloned the repository instead? Use the same `windows` / `linux` scripts. On REMnux,
+`linux/install.sh` notices and offers to set up the REMnux edition.
 
 ## Design philosophy
 
@@ -171,15 +174,17 @@ Help → Tool status shows which edition is running and where each tool was foun
 1. Install Python from python.org (3.12 or newer recommended; 3.10 is the minimum). On the
    first installer screen, tick **"Add python.exe to PATH"**.
 2. Extract this folder somewhere permanent, e.g. `C:\Tools\maldoc-triage-workbench`.
-3. Double-click **`install.bat`** (one time, needs internet access to github.com and pypi.org).
-   It creates a private Python environment (`.venv`) in the folder, the same as `install.sh`.
-4. Double-click **`start.bat`** to run the app. You can also drag a sample onto `start.bat`.
+3. Open the **`windows`** folder and double-click **`install.bat`** (one time, needs internet
+   access to github.com and pypi.org). It creates a private Python environment (`.venv`) in
+   the app folder, the same as the Linux installer.
+4. Double-click **`start.bat`** (also in `windows`) to run the app. You can also drag a sample
+   onto `start.bat`, or put a shortcut to it on your desktop.
 
 ### Linux, quick way
 
 ```bash
-./install.sh     # one time: creates .venv, downloads the tools, installs the packages
-./start.sh       # or: ./start.sh suspicious.pdf
+linux/install.sh     # one time: creates .venv, downloads the tools, installs the packages
+linux/start.sh       # or: linux/start.sh suspicious.pdf
 ```
 
 If the window doesn't open under an X11 session, install Qt's missing library:

@@ -6,7 +6,7 @@ REMnux installs each tool in its own environment (/opt/oletools,
 Python can import from those. So in the REMnux edition a worker task that needs
 one of these libraries runs under that environment's own interpreter (the one
 named on the launcher's #! line) and uses REMnux's copy. If REMnux's copy is
-missing or doesn't work, the app's own copy (from install.sh) is used instead and
+missing or doesn't work, the app's own copy (from the installer) is used instead and
 Tool status says why. The standard edition always uses its own copies.
 
 Only the interpreter is borrowed: it runs this app's worker code (run.py --worker),

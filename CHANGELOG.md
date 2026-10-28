@@ -3,6 +3,14 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+- **Setup scripts are in per-OS folders.** The standard zip (and the repository) now has
+  `windows/install.bat` and `windows/start.bat`, and `linux/install.sh` and
+  `linux/start.sh`, instead of all four at the top. They work from any folder. The REMnux
+  zip is unchanged: its `install.sh` and `start.sh` stay at the top.
+
 ## 1.6.0 (2026-10-27)
 
 ### Added

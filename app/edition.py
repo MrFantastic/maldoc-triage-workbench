@@ -1,7 +1,7 @@
 """Which package this is.
 
   standard  Windows / Linux. Fetches its own copies of the analysis tools into
-            vendor/ (install.bat / install.sh) and can update them.
+            vendor/ (windows/install.bat / linux/install.sh) and can update them.
   remnux    For a REMnux VM. Uses only the tools REMnux installs (PATH,
             /usr/local/bin); never downloads tools and ignores any vendor/ folder.
 
@@ -40,7 +40,7 @@ def label() -> str:
 
 
 _STANDARD_HINTS = {
-    "tools": "run install.bat / install.sh (setup_vendor.py)",
+    "tools": "run windows\\install.bat or linux/install.sh (setup_vendor.py)",
     "peepdf": "optional: python setup_vendor.py --peepdf",
     "xlm": "optional: pip install -r requirements-xlm.txt",
     "oletools": "pip install oletools",

@@ -91,9 +91,13 @@ class PackageTests(unittest.TestCase):
 
     def test_standard_package(self):
         names = self._names("standard")
-        for f in ("install.bat", "start.bat", "install.sh", "start.sh", "setup_vendor.py", "run.py",
-                  "requirements.txt", "app/edition.py", "vendor/.gitkeep"):
+        for f in ("windows/install.bat", "windows/start.bat", "linux/install.sh", "linux/start.sh",
+                  "setup_vendor.py", "run.py", "requirements.txt", "app/edition.py", "vendor/.gitkeep"):
             self.assertIn(f, names)
+        self.assertFalse({"install.bat", "start.bat", "install.sh", "start.sh"} & names)   # only in the OS folders
+        for f in ("linux/install.sh", "linux/start.sh"):
+            info = self.zips["standard"].getinfo(f"{self.pkg.TOP}/{f}")
+            self.assertTrue((info.external_attr >> 16) & stat.S_IXUSR, f)
         self.assertEqual(self._read("standard", "EDITION").strip(), "standard")
         self.assertFalse([n for n in names if n.startswith("vendor/") and n != "vendor/.gitkeep"])
         self.assertNotIn("package.py", names)
@@ -101,14 +105,16 @@ class PackageTests(unittest.TestCase):
 
     def test_remnux_package(self):
         names = self._names("remnux")
-        for f in ("install.bat", "start.bat", "setup_vendor.py", "build.py", "requirements.txt"):
+        for f in ("setup_vendor.py", "build.py", "requirements.txt"):
             self.assertNotIn(f, names)
+        self.assertFalse(any(n.startswith(("windows/", "linux/")) for n in names))
         self.assertFalse(any(n.startswith("vendor/") for n in names))
         for f in ("install.sh", "start.sh", "run.py", "README.md", "app/edition.py", "app/adapters/nojs/STPyV8.py"):
             self.assertIn(f, names)
         self.assertEqual(self._read("remnux", "EDITION").strip(), "remnux")
         self.assertIn("REMnux edition", self._read("remnux", "install.sh"))
         self.assertIn("REMnux edition", self._read("remnux", "README.md"))
+        self.assertIn('cd "$(dirname "$0")"\n', self._read("remnux", "start.sh"))     # its own folder, not ..
         info = self.zips["remnux"].getinfo(f"{self.pkg.TOP}/install.sh")
         self.assertTrue((info.external_attr >> 16) & stat.S_IXUSR)
 

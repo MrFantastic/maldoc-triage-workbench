@@ -1,5 +1,5 @@
 # Maldoc Triage Workbench is an application that runs from its own folder
-# (install.sh / install.bat, then start.sh / start.bat). It starts its isolated
+# (linux/install.sh or windows/install.bat, then start.sh / start.bat). It starts its isolated
 # helper processes through run.py and finds the analysis tools relative to it,
 # so it is deliberately not packaged for "pip install". This file records the
 # project metadata and the settings for development tools; install the
