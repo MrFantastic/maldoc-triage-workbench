@@ -3,7 +3,7 @@
 All notable changes to Maldoc Triage Workbench. Versions follow
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 1.6.0 (2026-10-27)
 
 ### Added
 - **YARA scanning with your own rules.** File → YARA rules… (or the YARA tab) takes one
